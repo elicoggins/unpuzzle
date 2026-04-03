@@ -67,14 +67,14 @@ export function ScoreReveal({
             className="flex items-center gap-2"
           >
             <span
-              className="text-xl font-bold font-[family-name:var(--font-mono)] text-center"
+              className="text-xl font-bold font-[family-name:var(--font-heading)] text-center"
               style={{ color }}
             >
               {headline}
             </span>
             {glyph && !isMateCase && (
               <span
-                className="text-sm font-bold font-[family-name:var(--font-mono)] rounded-full border-2 w-8 h-8 flex items-center justify-center shrink-0"
+                className="text-sm font-bold font-[family-name:var(--font-heading)] rounded-full border-2 w-8 h-8 flex items-center justify-center shrink-0"
                 style={{ color, borderColor: color }}
               >
                 {glyph}
