@@ -560,7 +560,7 @@ export default function PlayPage() {
           {gameState === "confirming" && (
             <div
               className="absolute inset-0 z-[5] cursor-pointer"
-              onClick={undoMove}
+              onMouseDown={undoMove}
             />
           )}
 
@@ -587,7 +587,7 @@ export default function PlayPage() {
         style={{ width: 240 }}
       >
         {/* Move history */}
-        <div className="border border-border rounded-lg flex flex-col overflow-hidden" style={{ height: 80 }}>
+        <div className="border border-border rounded-lg flex flex-col overflow-hidden" style={{ height: 200 }}>
           <div className="px-4 py-2 border-b border-border bg-bg-secondary">
             <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
               moves
