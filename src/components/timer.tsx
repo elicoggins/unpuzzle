@@ -38,51 +38,22 @@ export function Timer({ isRunning, onReset }: TimerProps) {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      {visible && (
-        <span className="font-[family-name:var(--font-mono)] text-lg text-text-secondary tabular-nums">
-          {formatTime()}
-        </span>
-      )}
+    <>
       <button
         onClick={() => setVisible(!visible)}
-        className="p-2 text-text-muted hover:text-text-secondary transition-colors"
+        className={`text-xs cursor-pointer transition-colors ${
+          visible
+            ? "text-text-muted hover:text-text-secondary"
+            : "text-text-muted/40 hover:text-text-muted line-through"
+        }`}
         title={visible ? "Hide timer" : "Show timer"}
       >
-        {visible ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" opacity="0.3" />
-            <polyline points="12 6 12 12 16 14" opacity="0.3" />
-            <line x1="4" y1="4" x2="20" y2="20" />
-          </svg>
-        )}
+        cur time
       </button>
-    </div>
+      <span className="font-[family-name:var(--font-mono)] text-text-secondary tabular-nums">
+        {visible ? formatTime() : "—"}
+      </span>
+    </>
   );
 }
 

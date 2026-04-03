@@ -313,8 +313,11 @@ export default function SettingsPage() {
                       {font.name}
                     </span>
                     <span
-                      className="text-xs text-text-muted"
-                      style={{ fontFamily: `var(${font.cssVar})` }}
+                      className="text-xs text-text-muted truncate"
+                      style={{
+                        fontFamily: `var(${font.cssVar})`,
+                        fontSize: font.cssVar === "--font-press-start" ? "0.5rem" : undefined,
+                      }}
                     >
                       the quick brown fox
                     </span>

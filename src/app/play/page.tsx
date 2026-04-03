@@ -11,9 +11,9 @@ import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@
 import { getScoreArrowColor } from "@/lib/scoring";
 import { getRandomPosition } from "@/lib/sample-positions";
 import type { Position, EvalFeedback } from "@/lib/types";
-import type { PieceDropHandlerArgs, Arrow } from "react-chessboard";
+import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
-type GameState = "loading" | "playing" | "evaluating" | "scored";
+type GameState = "loading" | "playing" | "confirming" | "evaluating" | "scored";
 
 function computeMaxBoardSize(): number {
   if (typeof window === "undefined") return 400;
@@ -36,12 +36,16 @@ export default function PlayPage() {
   const [timerKey, setTimerKey] = useState(0);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [sessionScores, setSessionScores] = useState<number[]>([]);
+  const [sessionTimes, setSessionTimes] = useState<number[]>([]);
   const [boardSize, setBoardSize] = useState(400);
   const [engineDepth, setEngineDepth] = useState<DepthUpdate | null>(null);
   const [engineReady, setEngineReady] = useState(false);
   const [evalForBar, setEvalForBar] = useState<{ eval: number; isMate: boolean; mateIn: number | null }>({ eval: 0, isMate: false, mateIn: null });
   const [engineLines, setEngineLines] = useState<EngineLine[]>([]);
   const [lastPlayedUci, setLastPlayedUci] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ uci: string; san: string } | null>(null);
+  const [legalMoveSquares, setLegalMoveSquares] = useState<string[]>([]);
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const gameRef = useRef<Chess>(new Chess());
   const startTimeRef = useRef<number>(0);
   const resizingRef = useRef(false);
@@ -53,11 +57,15 @@ export default function PlayPage() {
     engine.init().then(() => setEngineReady(true));
   }, []);
 
-  // Load session scores from localStorage on mount
+  // Load session data from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem("session-scores");
       if (stored) setSessionScores(JSON.parse(stored));
+    } catch {}
+    try {
+      const stored = localStorage.getItem("session-times");
+      if (stored) setSessionTimes(JSON.parse(stored));
     } catch {}
   }, []);
 
@@ -81,6 +89,9 @@ export default function PlayPage() {
     setEngineDepth(null);
     setEngineLines([]);
     setLastPlayedUci(null);
+    setPendingMove(null);
+    setLegalMoveSquares([]);
+    setSelectedSquare(null);
     setTimerKey((k) => k + 1);
 
     const data = getRandomPosition();
@@ -117,8 +128,7 @@ export default function PlayPage() {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
         const delta = Math.max(dx, dy);
-        const max = computeMaxBoardSize();
-        const newSize = Math.max(280, Math.min(max, startSize + delta));
+        const newSize = Math.max(280, startSize + delta);
         setBoardSize(newSize);
       };
 
@@ -232,6 +242,12 @@ export default function PlayPage() {
         try { localStorage.setItem("session-scores", JSON.stringify(next)); } catch {}
         return next;
       });
+      setSessionTimes((prev) => {
+        const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+        const next = [...prev, elapsed];
+        try { localStorage.setItem("session-times", JSON.stringify(next)); } catch {}
+        return next;
+      });
       setGameState("scored");
       setEngineDepth(null);
     },
@@ -255,24 +271,50 @@ export default function PlayPage() {
 
         setFen(game.fen());
         setMoveHistory((prev) => [...prev, moveResult.san]);
+        setLegalMoveSquares([]);
+        setSelectedSquare(null);
 
         const uciMove =
           sourceSquare + (targetSquare || "") + (moveResult.promotion || "");
-        evaluateMove(uciMove, moveResult.san);
+        setPendingMove({ uci: uciMove, san: moveResult.san });
+        setGameState("confirming");
 
         return true;
       } catch {
         return false;
       }
     },
-    [gameState, evaluateMove]
+    [gameState]
   );
+
+  const confirmMove = useCallback(() => {
+    if (!pendingMove) return;
+    evaluateMove(pendingMove.uci, pendingMove.san);
+    setPendingMove(null);
+  }, [pendingMove, evaluateMove]);
+
+  const undoMove = useCallback(() => {
+    if (!position) return;
+    const game = new Chess(position.fen);
+    gameRef.current = game;
+    setFen(position.fen);
+    setMoveHistory([]);
+    setPendingMove(null);
+    setLegalMoveSquares([]);
+    setSelectedSquare(null);
+    setGameState("playing");
+  }, [position]);
 
   const sessionACPL =
     sessionScores.length > 0
       ? Math.round(
           sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length
         )
+      : null;
+
+  const avgTime =
+    sessionTimes.length > 0
+      ? Math.round(sessionTimes.reduce((a, b) => a + b, 0) / sessionTimes.length)
       : null;
 
   const puzzleMoveNumber = position?.moveNumber ?? 1;
@@ -305,15 +347,67 @@ export default function PlayPage() {
 
   // Compute square highlight for the destination of the player's move
   const squareStyles = useMemo<Record<string, React.CSSProperties>>(() => {
-    if (gameState !== "scored" || !feedback || !lastPlayedUci || lastPlayedUci.length < 4) return {};
-    const targetSquare = lastPlayedUci.slice(2, 4);
-    return {
-      [targetSquare]: {
+    const styles: Record<string, React.CSSProperties> = {};
+
+    // Legal move dots
+    for (const sq of legalMoveSquares) {
+      styles[sq] = {
+        background: "radial-gradient(circle, color-mix(in srgb, var(--color-accent) 40%, transparent) 25%, transparent 25%)",
+        borderRadius: "50%",
+      };
+    }
+
+    // Selected square highlight
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        backgroundColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)",
+      };
+    }
+
+    // Scored state: highlight played move destination
+    if (gameState === "scored" && feedback && lastPlayedUci && lastPlayedUci.length >= 4) {
+      const targetSquare = lastPlayedUci.slice(2, 4);
+      styles[targetSquare] = {
         boxShadow: `inset 0 0 0 3px ${getScoreArrowColor(feedback.centipawnLoss)}`,
         borderRadius: "50%",
-      },
-    };
-  }, [gameState, feedback, lastPlayedUci]);
+      };
+    }
+
+    return styles;
+  }, [legalMoveSquares, selectedSquare, gameState, feedback, lastPlayedUci]);
+
+  const onSquareMouseDown = useCallback(
+    ({ piece, square }: SquareHandlerArgs) => {
+      if (gameState !== "playing") {
+        setLegalMoveSquares([]);
+        setSelectedSquare(null);
+        return;
+      }
+      const game = gameRef.current;
+      const moves = game.moves({ square: square as any, verbose: true });
+      if (moves.length > 0 && piece) {
+        setLegalMoveSquares(moves.map((m) => m.to));
+        setSelectedSquare(square);
+      } else {
+        setLegalMoveSquares([]);
+        setSelectedSquare(null);
+      }
+    },
+    [gameState]
+  );
+
+  const onSquareClick = useCallback(
+    ({ square }: SquareHandlerArgs) => {
+      if (gameState !== "playing") return;
+      const game = gameRef.current;
+      const moves = game.moves({ square: square as any, verbose: true });
+      if (moves.length === 0) {
+        setLegalMoveSquares([]);
+        setSelectedSquare(null);
+      }
+    },
+    [gameState]
+  );
 
   return (
     <div className="flex-1 flex items-start justify-center p-4 pt-4 gap-4">
@@ -363,14 +457,20 @@ export default function PlayPage() {
               {sessionScores.length}
             </span>
           </div>
-          {sessionACPL !== null && (
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs text-text-muted">ACPL</span>
-              <span className="font-[family-name:var(--font-mono)] text-text-secondary">
-                {sessionACPL}
-              </span>
-            </div>
-          )}
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-text-muted">ACPL</span>
+            <span className="font-[family-name:var(--font-mono)] text-text-secondary">
+              {sessionACPL ?? 0}
+            </span>
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-text-muted">avg time</span>
+            <span className="font-[family-name:var(--font-mono)] text-text-secondary">
+              {avgTime !== null
+                ? `${Math.floor(avgTime / 60)}:${(avgTime % 60).toString().padStart(2, "0")}`
+                : "0:00"}
+            </span>
+          </div>
           <div className="flex justify-between items-baseline">
             <Timer key={timerKey} isRunning={timerRunning} />
           </div>
@@ -378,7 +478,9 @@ export default function PlayPage() {
             <button
               onClick={() => {
                 setSessionScores([]);
+                setSessionTimes([]);
                 try { localStorage.removeItem("session-scores"); } catch {}
+                try { localStorage.removeItem("session-times"); } catch {}
               }}
               className="w-full text-xs text-text-muted hover:text-text-secondary border border-border hover:border-border-hover rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
             >
@@ -414,6 +516,8 @@ export default function PlayPage() {
           <ChessBoard
             position={fen}
             onPieceDrop={onPieceDrop}
+            onSquareMouseDown={onSquareMouseDown}
+            onSquareClick={onSquareClick}
             boardOrientation={boardOrientation}
             allowDragging={gameState === "playing"}
             arrows={boardArrows}
@@ -428,10 +532,18 @@ export default function PlayPage() {
             </div>
           )}
 
+          {/* Click-to-undo overlay during confirming */}
+          {gameState === "confirming" && (
+            <div
+              className="absolute inset-0 z-[5] cursor-pointer"
+              onClick={undoMove}
+            />
+          )}
+
           {/* Resize handle */}
           <div
             onMouseDown={handleResizeStart}
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-10 group"
+            className="absolute -bottom-1 -right-1 w-4 h-4 cursor-nwse-resize z-10 group"
             title="Drag to resize"
           >
             <svg
@@ -451,7 +563,7 @@ export default function PlayPage() {
         style={{ width: 240 }}
       >
         {/* Move history */}
-        <div className="border border-border rounded-lg flex flex-col overflow-hidden flex-1 max-h-[50%]">
+        <div className="border border-border rounded-lg flex flex-col overflow-hidden" style={{ height: 80 }}>
           <div className="px-4 py-2 border-b border-border bg-bg-secondary">
             <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
               moves
@@ -476,15 +588,28 @@ export default function PlayPage() {
           </div>
         </div>
 
-        {/* Engine lines */}
-        {(gameState === "evaluating" || gameState === "scored") && engineLines.length > 0 && position && (
-          <EngineLines
-            fen={position.fen}
-            lines={engineLines}
-            depth={engineDepth?.depth ?? feedback?.evalBefore ? 16 : 0}
-            isSearching={gameState === "evaluating"}
-          />
-        )}
+        {/* Engine lines (always visible) */}
+        <div style={{ height: 120 }}>
+          {(gameState === "evaluating" || gameState === "scored") && engineLines.length > 0 && position ? (
+            <EngineLines
+              fen={position.fen}
+              lines={engineLines}
+              depth={engineDepth?.depth ?? feedback?.evalBefore ? 16 : 0}
+              isSearching={gameState === "evaluating"}
+            />
+          ) : (
+            <div className="border border-border rounded-lg overflow-hidden h-full">
+              <div className="px-3 py-1.5 border-b border-border bg-bg-secondary flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+                  engine
+                </span>
+              </div>
+              <div className="flex items-center justify-center" style={{ height: "calc(100% - 33px)" }}>
+                <span className="text-xs text-text-muted/50">—</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Feedback panel */}
         <div className="border border-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[180px]">
@@ -497,6 +622,26 @@ export default function PlayPage() {
                 Find the best move for{" "}
                 {position?.sideToMove === "w" ? "white" : "black"}.
               </div>
+            </div>
+          )}
+
+          {gameState === "confirming" && pendingMove && (
+            <div className="flex flex-col items-center gap-3 w-full">
+              <div className="text-lg font-bold font-[family-name:var(--font-mono)] text-text-primary">
+                {puzzleMoveNumber}. {pendingMove.san}
+              </div>
+              <button
+                onClick={confirmMove}
+                className="w-full px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                confirm
+              </button>
+              <button
+                onClick={undoMove}
+                className="w-full text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+              >
+                undo
+              </button>
             </div>
           )}
 

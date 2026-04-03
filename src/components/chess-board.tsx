@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { PieceDropHandlerArgs, Arrow } from "react-chessboard";
+import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
 const Board = dynamic(
   () => import("react-chessboard").then((m) => m.Chessboard),
@@ -16,6 +16,8 @@ const Board = dynamic(
 interface ChessBoardProps {
   position: string;
   onPieceDrop?: (args: PieceDropHandlerArgs) => boolean;
+  onSquareMouseDown?: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
+  onSquareClick?: (args: SquareHandlerArgs) => void;
   boardOrientation?: "white" | "black";
   allowDragging?: boolean;
   animationDurationInMs?: number;
@@ -27,6 +29,8 @@ interface ChessBoardProps {
 export function ChessBoard({
   position,
   onPieceDrop,
+  onSquareMouseDown,
+  onSquareClick,
   boardOrientation = "white",
   allowDragging = true,
   animationDurationInMs = 200,
@@ -42,9 +46,12 @@ export function ChessBoard({
           id: "unpuzzle-board",
           position,
           onPieceDrop,
+          onSquareMouseDown,
+          onSquareClick,
           boardOrientation,
           allowDragging,
           animationDurationInMs,
+          dragActivationDistance: 0,
           arrows: arrows ?? [],
           clearArrowsOnClick: true,
           clearArrowsOnPositionChange: true,
@@ -58,9 +65,13 @@ export function ChessBoard({
           lightSquareStyle: {
             backgroundColor: "#424242",
           },
-          dropSquareStyle: {
-            boxShadow: "inset 0 0 1px 6px rgba(57, 255, 20, 0.4)",
+          darkSquareNotationStyle: {
+            color: "#666666",
           },
+          lightSquareNotationStyle: {
+            color: "#555555",
+          },
+          dropSquareStyle: {},
         }}
       />
     </div>
