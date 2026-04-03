@@ -142,176 +142,179 @@ export default function SettingsPage() {
   const currentAccent = resolveAccent(choice).accent;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-      <div className="max-w-2xl w-full space-y-8">
+    <div className="flex-1 flex flex-col items-center justify-center px-6 py-6">
+      <div className="max-w-4xl w-full space-y-4">
         <h1 className="text-3xl font-bold tracking-tight">settings</h1>
 
-        <div className="border border-border rounded-lg p-6 space-y-6">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
-            accent color
-          </h2>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Accent Color */}
+          <div className="border border-border rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+              accent color
+            </h2>
 
-          {/* Presets */}
-          <div className="space-y-3">
-            <div className="text-sm text-text-secondary">presets</div>
-            <div className="flex items-center gap-4">
-              {PRESETS.map((preset, i) => {
-                const isActive =
-                  choice.type === "preset" && choice.index === i;
+            {/* Presets */}
+            <div className="space-y-2">
+              <div className="text-xs text-text-secondary">presets</div>
+              <div className="flex items-center gap-3">
+                {PRESETS.map((preset, i) => {
+                  const isActive =
+                    choice.type === "preset" && choice.index === i;
+                  return (
+                    <button
+                      key={preset.name}
+                      onClick={() => selectPreset(i)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors cursor-pointer"
+                      style={{
+                        borderColor: isActive
+                          ? preset.accent
+                          : "var(--color-border)",
+                        background: isActive
+                          ? `${preset.accent}15`
+                          : "transparent",
+                      }}
+                    >
+                      <span
+                        className="w-5 h-5 rounded-full shrink-0"
+                        style={{
+                          background: preset.accent,
+                          boxShadow: isActive
+                            ? `0 0 0 2px var(--color-bg-primary), 0 0 0 3px ${preset.accent}`
+                            : "none",
+                        }}
+                      />
+                      <span
+                        className="text-sm font-medium"
+                        style={{
+                          color: isActive
+                            ? preset.accent
+                            : "var(--color-text-primary)",
+                        }}
+                      >
+                        {preset.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom */}
+            <div className="space-y-2">
+              <div className="text-xs text-text-secondary">custom</div>
+              <div className="flex items-center gap-3">
+                <div
+                  className="relative w-8 h-8 rounded-lg overflow-hidden border transition-colors"
+                  style={{
+                    borderColor:
+                      choice.type === "custom"
+                        ? currentAccent
+                        : "var(--color-border)",
+                    boxShadow:
+                      choice.type === "custom"
+                        ? `0 0 0 2px var(--color-bg-primary), 0 0 0 3px ${currentAccent}`
+                        : "none",
+                  }}
+                >
+                  <input
+                    type="color"
+                    value={choice.type === "custom" ? choice.color : "#d4a843"}
+                    onChange={(e) => selectCustom(e.target.value)}
+                    className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                  />
+                  <span
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background:
+                        choice.type === "custom"
+                          ? choice.color
+                          : "var(--color-bg-tertiary)",
+                    }}
+                  />
+                </div>
+                {mounted && choice.type === "custom" && (
+                  <span className="text-sm font-[family-name:var(--font-mono)] text-text-secondary">
+                    {choice.color}
+                  </span>
+                )}
+                {mounted && choice.type !== "custom" && (
+                  <span className="text-sm text-text-muted">
+                    pick any color
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="text-xs text-text-secondary">preview</div>
+              <div className="flex items-center gap-3">
+                <span
+                  className="px-4 py-1.5 text-xs font-bold uppercase tracking-widest border-2 rounded-lg transition-colors"
+                  style={{
+                    borderColor: currentAccent,
+                    color: currentAccent,
+                  }}
+                >
+                  button
+                </span>
+                <span
+                  className="text-base font-bold"
+                  style={{ color: currentAccent }}
+                >
+                  accent text
+                </span>
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ background: currentAccent }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Font */}
+          <div className="border border-border rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+              font
+            </h2>
+            <div className="flex flex-col gap-2">
+              {FONT_OPTIONS.map((font) => {
+                const isActive = selectedFont === font.cssVar;
                 return (
                   <button
-                    key={preset.name}
-                    onClick={() => selectPreset(i)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors cursor-pointer"
+                    key={font.cssVar}
+                    onClick={() => selectFont(font.cssVar)}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors cursor-pointer text-left"
                     style={{
                       borderColor: isActive
-                        ? preset.accent
+                        ? currentAccent
                         : "var(--color-border)",
                       background: isActive
-                        ? `${preset.accent}15`
+                        ? `${currentAccent}15`
                         : "transparent",
                     }}
                   >
                     <span
-                      className="w-6 h-6 rounded-full shrink-0"
-                      style={{
-                        background: preset.accent,
-                        boxShadow: isActive
-                          ? `0 0 0 2px var(--color-bg-primary), 0 0 0 4px ${preset.accent}`
-                          : "none",
-                      }}
-                    />
-                    <span
                       className="text-sm font-medium"
                       style={{
+                        fontFamily: `var(${font.cssVar})`,
                         color: isActive
-                          ? preset.accent
+                          ? currentAccent
                           : "var(--color-text-primary)",
                       }}
                     >
-                      {preset.name}
+                      {font.name}
+                    </span>
+                    <span
+                      className="text-xs text-text-muted"
+                      style={{ fontFamily: `var(${font.cssVar})` }}
+                    >
+                      the quick brown fox
                     </span>
                   </button>
                 );
               })}
             </div>
-          </div>
-
-          {/* Custom */}
-          <div className="space-y-3">
-            <div className="text-sm text-text-secondary">custom</div>
-            <div className="flex items-center gap-4">
-              <div
-                className="relative w-10 h-10 rounded-lg overflow-hidden border transition-colors"
-                style={{
-                  borderColor:
-                    choice.type === "custom"
-                      ? currentAccent
-                      : "var(--color-border)",
-                  boxShadow:
-                    choice.type === "custom"
-                      ? `0 0 0 2px var(--color-bg-primary), 0 0 0 4px ${currentAccent}`
-                      : "none",
-                }}
-              >
-                <input
-                  type="color"
-                  value={choice.type === "custom" ? choice.color : "#d4a843"}
-                  onChange={(e) => selectCustom(e.target.value)}
-                  className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
-                />
-                <span
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      choice.type === "custom"
-                        ? choice.color
-                        : "var(--color-bg-tertiary)",
-                  }}
-                />
-              </div>
-              {mounted && choice.type === "custom" && (
-                <span className="text-sm font-[family-name:var(--font-mono)] text-text-secondary">
-                  {choice.color}
-                </span>
-              )}
-              {mounted && choice.type !== "custom" && (
-                <span className="text-sm text-text-muted">
-                  pick any color
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className="space-y-3 pt-2 border-t border-border">
-            <div className="text-sm text-text-secondary">preview</div>
-            <div className="flex items-center gap-4">
-              <span
-                className="px-6 py-2 text-sm font-bold uppercase tracking-widest border-2 rounded-lg transition-colors"
-                style={{
-                  borderColor: currentAccent,
-                  color: currentAccent,
-                }}
-              >
-                button
-              </span>
-              <span
-                className="text-lg font-bold"
-                style={{ color: currentAccent }}
-              >
-                accent text
-              </span>
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ background: currentAccent }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Font */}
-        <div className="border border-border rounded-lg p-6 space-y-6">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
-            font
-          </h2>
-          <div className="flex flex-col gap-3">
-            {FONT_OPTIONS.map((font) => {
-              const isActive = selectedFont === font.cssVar;
-              return (
-                <button
-                  key={font.cssVar}
-                  onClick={() => selectFont(font.cssVar)}
-                  className="flex items-center justify-between px-4 py-3 rounded-lg border transition-colors cursor-pointer text-left"
-                  style={{
-                    borderColor: isActive
-                      ? currentAccent
-                      : "var(--color-border)",
-                    background: isActive
-                      ? `${currentAccent}15`
-                      : "transparent",
-                  }}
-                >
-                  <span
-                    className="text-base font-medium"
-                    style={{
-                      fontFamily: `var(${font.cssVar})`,
-                      color: isActive
-                        ? currentAccent
-                        : "var(--color-text-primary)",
-                    }}
-                  >
-                    {font.name}
-                  </span>
-                  <span
-                    className="text-sm text-text-muted"
-                    style={{ fontFamily: `var(${font.cssVar})` }}
-                  >
-                    the quick brown fox
-                  </span>
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
