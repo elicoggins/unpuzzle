@@ -253,7 +253,7 @@ export default function PlayPage() {
         bestMoveSan,
         isMateBefore: evalBefore.isMate,
         mateInBefore: mateInBeforeWhite,
-        isMateAfterPlayed: evalAfter.isMate,
+        isMateAfterPlayed: evalAfter.isMate && !afterGame.isCheckmate(),
         mateInAfterPlayed: mateInAfterWhite,
       };
 
