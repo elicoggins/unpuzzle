@@ -613,7 +613,7 @@ export default function PlayPage() {
         </div>
 
         {/* Engine lines (always visible) */}
-        <div style={{ height: 120 }}>
+        <div>
           {(gameState === "evaluating" || gameState === "scored") && engineLines.length > 0 && position ? (
             <EngineLines
               fen={position.fen}
@@ -622,14 +622,20 @@ export default function PlayPage() {
               isSearching={gameState === "evaluating"}
             />
           ) : (
-            <div className="border border-border rounded-lg overflow-hidden h-full">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="px-3 py-1.5 border-b border-border bg-bg-secondary flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
                   engine
                 </span>
               </div>
-              <div className="flex items-center justify-center" style={{ height: "calc(100% - 33px)" }}>
-                <span className="text-xs text-text-muted/50">—</span>
+              <div className="divide-y divide-border/50">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-start gap-2 px-3 py-1.5">
+                    <span className="text-[11px] font-bold font-[family-name:var(--font-mono)] min-w-[44px] text-center rounded px-1 py-0.5 text-text-muted/30">
+                      —
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

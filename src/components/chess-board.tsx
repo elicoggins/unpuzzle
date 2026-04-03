@@ -72,6 +72,9 @@ export function ChessBoard({
             color: "#555555",
           },
           dropSquareStyle: {},
+          draggingPieceStyle: {
+            transform: "scale(1)",
+          },
         }}
       />
     </div>
