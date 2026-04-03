@@ -1,3 +1,5 @@
+<img src="./src/app/icon.svg" width="48" height="48" alt="unpuzzle logo" />
+
 # unpuzzle
 
 Chess puzzle apps suffer a common problem. Users know they're grinding puzzles, so they calculate tactics and sacrifices far more willingly than they would in a standard timed game.
