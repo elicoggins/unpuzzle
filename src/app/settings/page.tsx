@@ -174,7 +174,7 @@ export default function SettingsPage() {
       <div className="max-w-4xl w-full space-y-4">
         <h1 className="text-3xl font-bold tracking-tight">settings</h1>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Accent Color */}
           <div className="border border-border rounded-lg p-5 space-y-4">
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
