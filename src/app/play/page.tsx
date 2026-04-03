@@ -11,6 +11,7 @@ import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@
 import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
 import { getRandomPosition } from "@/lib/sample-positions";
+import { loadDepth } from "@/app/settings/page";
 import type { Position, EvalFeedback } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
@@ -166,7 +167,7 @@ export default function PlayPage() {
       const sideToMove = position.sideToMove;
 
       // 1. Evaluate the original position with MultiPV for engine lines display
-      const evalBefore: EvalResult = await evaluateWithFallback(originalFen, 20, (update) => {
+      const evalBefore: EvalResult = await evaluateWithFallback(originalFen, loadDepth(), (update) => {
         setEngineDepth(update);
         // Update eval bar with live eval (convert from side-to-move to white's perspective)
         const whiteEval = sideToMove === "w" ? update.eval : -update.eval;
@@ -205,7 +206,7 @@ export default function PlayPage() {
 
       // 4. Evaluate the position after the user's move (single PV, no live updates needed)
       setEngineDepth(null);
-      const evalAfter: EvalResult = await evaluateWithFallback(afterFen, 20, (update) => {
+      const evalAfter: EvalResult = await evaluateWithFallback(afterFen, loadDepth(), (update) => {
         setEngineDepth(update);
       });
 
@@ -219,7 +220,7 @@ export default function PlayPage() {
           promotion: evalBefore.bestMove.length > 4 ? evalBefore.bestMove[4] : undefined,
         });
         const bestFen = bestGame.fen();
-        const evalAfterBestResult = await evaluateWithFallback(bestFen, 20);
+        const evalAfterBestResult = await evaluateWithFallback(bestFen, loadDepth());
         // Negate because perspective flips after a move
         evalAfterBestCp = -evalAfterBestResult.eval;
       }
@@ -235,6 +236,10 @@ export default function PlayPage() {
       // Convert to white's perspective for display (+ = white winning, − = black winning)
       const toWhite = (cp: number) => sideToMove === "w" ? cp : -cp;
       const mateInBeforeWhite = evalBefore.mateIn != null && sideToMove === "b" ? -evalBefore.mateIn : evalBefore.mateIn;
+      // evalAfter STM is opponent of user. mateIn from opponent's STM perspective → white's perspective:
+      const mateInAfterWhite = evalAfter.mateIn != null
+        ? (sideToMove === "w" ? -evalAfter.mateIn : evalAfter.mateIn)
+        : null;
 
       const result: EvalFeedback = {
         centipawnLoss,
@@ -245,11 +250,14 @@ export default function PlayPage() {
         bestMoveSan,
         isMateBefore: evalBefore.isMate,
         mateInBefore: mateInBeforeWhite,
+        isMateAfterPlayed: evalAfter.isMate,
+        mateInAfterPlayed: mateInAfterWhite,
       };
 
       setFeedback(result);
       setSessionScores((prev) => {
-        const next = [...prev, centipawnLoss];
+        // Cap at 300cp for ACPL purposes — mate scores (~100000) would otherwise destroy the average
+        const next = [...prev, Math.min(centipawnLoss, 300)];
         try { localStorage.setItem("session-scores", JSON.stringify(next)); } catch {}
         return next;
       });
@@ -402,13 +410,20 @@ export default function PlayPage() {
   const squareStyles = useMemo<Record<string, React.CSSProperties>>(() => {
     const styles: Record<string, React.CSSProperties> = {};
 
-    // Legal move dots
+    // Legal move dots (empty squares) and capture rings (occupied squares)
     for (const sq of legalMoveSquares) {
-      styles[sq] = {
-        background: "radial-gradient(circle, color-mix(in srgb, var(--color-accent) 40%, transparent) 25%, transparent 25%)",
-        borderRadius: "50%",
-        cursor: "pointer",
-      };
+      const hasPiece = !!gameRef.current.get(sq as any);
+      styles[sq] = hasPiece
+        ? {
+            borderRadius: "50%",
+            boxShadow: "inset 0 0 0 4px color-mix(in srgb, var(--color-accent) 50%, transparent)",
+            cursor: "pointer",
+          }
+        : {
+            background: "radial-gradient(circle, color-mix(in srgb, var(--color-accent) 40%, transparent) 25%, transparent 25%)",
+            borderRadius: "50%",
+            cursor: "pointer",
+          };
     }
 
     // Selected square highlight
@@ -449,9 +464,31 @@ export default function PlayPage() {
         wasAlreadySelectedRef.current = false;
         return;
       }
-      // If a piece is already selected and this square is a legal destination,
-      // leave the selection intact so onSquareClick can execute the move.
+      // If a piece is already selected and this square is a legal destination:
       if (selectedSquareRef.current && legalMoveSquares.includes(square)) {
+        if (piece) {
+          // Capture square: dnd-kit's drag (dragActivationDistance=0) will eat the
+          // subsequent click event, so execute the capture here on mousedown.
+          const from = selectedSquareRef.current;
+          const game = gameRef.current;
+          try {
+            const moveResult = game.move({ from, to: square, promotion: "q" });
+            if (moveResult) {
+              setFen(game.fen());
+              setMoveHistory((prev) => [...prev, moveResult.san]);
+              setLegalMoveSquares([]);
+              setSelectedSquare(null);
+              selectedSquareRef.current = null; // cleared sync so onSquareClick won't double-fire
+              const uciMove = from + square + (moveResult.promotion || "");
+              setPendingMove({ uci: uciMove, san: moveResult.san });
+              setGameState("confirming");
+            }
+          } catch {
+            // not a legal move — fall through
+          }
+          return;
+        }
+        // Empty destination square: let onSquareClick handle it
         wasAlreadySelectedRef.current = false;
         return;
       }
@@ -870,7 +907,7 @@ export default function PlayPage() {
                   <div className="w-full bg-border/30 rounded-full h-1 overflow-hidden">
                     <div
                       className="h-full bg-accent/60 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (engineDepth.depth / 20) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (engineDepth.depth / loadDepth()) * 100)}%` }}
                     />
                   </div>
                 </div>
@@ -887,6 +924,9 @@ export default function PlayPage() {
                 evalAfterPlayed={feedback.evalAfterPlayed}
                 isMateBefore={feedback.isMateBefore}
                 mateInBefore={feedback.mateInBefore}
+                isMateAfterPlayed={feedback.isMateAfterPlayed}
+                mateInAfterPlayed={feedback.mateInAfterPlayed}
+                sideToMove={position?.sideToMove ?? "w"}
                 show={true}
               />
               <button

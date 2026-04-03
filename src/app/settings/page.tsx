@@ -4,6 +4,20 @@ import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "accent-color";
 const FONT_KEY = "heading-font";
+export const DEPTH_KEY = "engine-depth";
+export const DEPTH_OPTIONS = [18, 20, 24] as const;
+export type EngineDepthOption = typeof DEPTH_OPTIONS[number];
+
+export function loadDepth(): EngineDepthOption {
+  try {
+    const raw = localStorage.getItem(DEPTH_KEY);
+    if (raw) {
+      const n = parseInt(raw, 10);
+      if ((DEPTH_OPTIONS as readonly number[]).includes(n)) return n as EngineDepthOption;
+    }
+  } catch {}
+  return 18;
+}
 
 const PRESETS = [
   { name: "Green", accent: "#39ff14", accentHover: "#6fff52" },
@@ -107,9 +121,11 @@ export default function SettingsPage() {
   });
   const [mounted, setMounted] = useState(false);
   const [selectedFont, setSelectedFont] = useState("--font-orbitron");
+  const [selectedDepth, setSelectedDepth] = useState<EngineDepthOption>(18);
 
   useEffect(() => {
     setChoice(loadChoice());
+    setSelectedDepth(loadDepth());
     try {
       const storedFont = localStorage.getItem(FONT_KEY);
       if (storedFont) {
@@ -144,6 +160,11 @@ export default function SettingsPage() {
     window.dispatchEvent(
       new CustomEvent("font-change", { detail: { fontVar: cssVar } })
     );
+  }
+
+  function selectDepth(depth: EngineDepthOption) {
+    setSelectedDepth(depth);
+    localStorage.setItem(DEPTH_KEY, String(depth));
   }
 
   const currentAccent = resolveAccent(choice).accent;
@@ -321,6 +342,36 @@ export default function SettingsPage() {
                     >
                       the quick brown fox
                     </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Engine Depth */}
+          <div className="border border-border rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+              engine depth
+            </h2>
+            <div className="flex flex-col gap-2">
+              {DEPTH_OPTIONS.map((d) => {
+                const isActive = selectedDepth === d;
+                const label = d === 18 ? "Fast" : d === 20 ? "Balanced" : "Deep";
+                const desc = d === 18 ? "~3–5s per move" : d === 20 ? "~8–12s per move" : "~20–30s per move";
+                return (
+                  <button
+                    key={d}
+                    onClick={() => selectDepth(d)}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors cursor-pointer text-left"
+                    style={{
+                      borderColor: isActive ? currentAccent : "var(--color-border)",
+                      background: isActive ? `${currentAccent}15` : "transparent",
+                    }}
+                  >
+                    <span className="text-sm font-medium" style={{ color: isActive ? currentAccent : "var(--color-text-primary)" }}>
+                      d{d} · {label}
+                    </span>
+                    <span className="text-xs text-text-muted">{desc}</span>
                   </button>
                 );
               })}

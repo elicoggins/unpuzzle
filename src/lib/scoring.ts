@@ -53,3 +53,32 @@ export function computeCentipawnLoss(
     return Math.max(0, playedEval - bestEval);
   }
 }
+
+/** Maps centipawns (white perspective) to win probability 0–100. */
+function cpToWinPercent(cp: number): number {
+  return 100 / (1 + Math.exp(-0.00368208 * cp));
+}
+
+/**
+ * Computes single-move accuracy 0–100%.
+ * Uses win-probability sigmoid: a 50pp drop in win% = 0% accuracy.
+ * Both evals are from white's perspective.
+ */
+export function computeMoveAccuracy(
+  bestEval: number,
+  playedEval: number,
+  sideToMove: "w" | "b"
+): number {
+  // Flip to side-to-move perspective so "positive = you're winning"
+  const bestCp = sideToMove === "b" ? -bestEval : bestEval;
+  const playedCp = sideToMove === "b" ? -playedEval : playedEval;
+
+  const wpBest = cpToWinPercent(bestCp);
+  const wpPlayed = cpToWinPercent(playedCp);
+
+  // Win-probability loss in percentage points (0–~50)
+  const wpLoss = Math.max(0, wpBest - wpPlayed);
+
+  // Scale: 0pp loss = 100%, 50pp loss = 0%
+  return Math.max(0, Math.min(100, Math.round(100 - 2 * wpLoss)));
+}

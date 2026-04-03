@@ -22,6 +22,10 @@ export interface EvalFeedback {
   bestMoveSan: string;
   /** Is the "before" eval a mate? */
   isMateBefore: boolean;
-  /** Mate in N for "before" position */
+  /** Mate in N for "before" position (white's perspective: + = white mates) */
   mateInBefore: number | null;
+  /** Is the position after the played move a forced mate? */
+  isMateAfterPlayed: boolean;
+  /** Mate in N after the played move (white's perspective) */
+  mateInAfterPlayed: number | null;
 }
