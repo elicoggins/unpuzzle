@@ -1,3 +1,5 @@
+export type PositionCategory = "tactical" | "balanced" | "critical" | "tricky" | "endgame";
+
 export interface Position {
   id: string;
   fen: string;
@@ -5,6 +7,7 @@ export interface Position {
   opening: string | null;
   phase: "opening" | "middlegame" | "endgame";
   moveNumber: number;
+  category?: PositionCategory;
 }
 
 export interface EvalFeedback {

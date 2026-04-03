@@ -459,7 +459,14 @@ export default function PlayPage() {
   const displaySquareStyles = useMemo(() => browseIdx !== null ? {} : squareStyles, [browseIdx, squareStyles]);
 
   const onSquareMouseDown = useCallback(
-    ({ piece, square }: SquareHandlerArgs) => {
+    ({ piece, square }: SquareHandlerArgs, e: React.MouseEvent) => {
+      // Right-click = drawing an arrow — hide move hints for the duration
+      if (e.button === 2) {
+        setLegalMoveSquares([]);
+        setSelectedSquare(null);
+        selectedSquareRef.current = null;
+        return;
+      }
       if (gameState !== "playing") {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
@@ -923,6 +930,7 @@ export default function PlayPage() {
               <ScoreReveal
                 centipawnLoss={feedback.centipawnLoss}
                 bestMoveSan={feedback.bestMoveSan}
+                category={position?.category}
                 evalBefore={feedback.evalBefore}
                 evalAfterBest={feedback.evalAfterBest}
                 evalAfterPlayed={feedback.evalAfterPlayed}

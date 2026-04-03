@@ -287,7 +287,7 @@ async function main() {
   // ── Emit TypeScript ────────────────────────────────────────────────────────
 
   const lines = [
-    `import type { Position } from "./types";`,
+    `import type { Position, PositionCategory } from "./types";`,
     ``,
     `// Curated positions sourced entirely from real Lichess games and puzzles.`,
     `// All FENs are guaranteed to appear in Lichess databases for cloud eval coverage.`,
@@ -301,7 +301,7 @@ async function main() {
     ``,
     `// DO NOT EDIT BY HAND — regenerate with: node scripts/fetch-positions.mjs > src/lib/curated-positions.ts`,
     ``,
-    `export type PositionCategory = "tactical" | "balanced" | "critical" | "tricky" | "endgame";`,
+    `export type { PositionCategory };`,
     ``,
     `export interface CuratedPosition extends Omit<Position, "id"> {`,
     `  category: PositionCategory;`,

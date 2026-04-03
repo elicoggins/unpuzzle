@@ -6,6 +6,7 @@ import { getScoreLabel, getScoreColor, getScoreGlyph, computeMoveAccuracy } from
 interface ScoreRevealProps {
   centipawnLoss: number;
   bestMoveSan: string;
+  category?: string;
   evalBefore: number;
   evalAfterBest: number;
   evalAfterPlayed: number;
@@ -29,6 +30,7 @@ function formatEval(cp: number, isMate?: boolean, mateIn?: number | null): strin
 export function ScoreReveal({
   centipawnLoss,
   bestMoveSan,
+  category,
   evalBefore,
   evalAfterBest,
   evalAfterPlayed,
@@ -155,6 +157,17 @@ export function ScoreReveal({
               {bestMoveSan}
             </span>
           </motion.div>
+
+          {category && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.65 }}
+              className="text-[10px] uppercase tracking-widest text-text-muted border border-border rounded-full px-2 py-0.5"
+            >
+              {category}
+            </motion.div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
