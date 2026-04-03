@@ -21,6 +21,7 @@ interface ChessBoardProps {
   animationDurationInMs?: number;
   arrows?: Arrow[];
   squareStyles?: Record<string, React.CSSProperties>;
+  boardKey?: string | number;
 }
 
 export function ChessBoard({
@@ -31,10 +32,12 @@ export function ChessBoard({
   animationDurationInMs = 200,
   arrows,
   squareStyles,
+  boardKey,
 }: ChessBoardProps) {
   return (
     <div className="rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full aspect-square">
       <Board
+        key={boardKey}
         options={{
           id: "unpuzzle-board",
           position,
@@ -43,7 +46,7 @@ export function ChessBoard({
           allowDragging,
           animationDurationInMs,
           arrows: arrows ?? [],
-          clearArrowsOnClick: false,
+          clearArrowsOnClick: true,
           clearArrowsOnPositionChange: true,
           squareStyles: squareStyles ?? {},
           boardStyle: {

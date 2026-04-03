@@ -14,8 +14,8 @@ export function Timer({ isRunning, onReset }: TimerProps) {
   useEffect(() => {
     if (!isRunning) return;
     const interval = setInterval(() => {
-      setElapsed((prev) => prev + 100);
-    }, 100);
+      setElapsed((prev) => prev + 1000);
+    }, 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
 
@@ -30,15 +30,11 @@ export function Timer({ isRunning, onReset }: TimerProps) {
   }, []);
 
   const seconds = Math.floor(elapsed / 1000);
-  const tenths = Math.floor((elapsed % 1000) / 100);
   const minutes = Math.floor(seconds / 60);
   const displaySeconds = seconds % 60;
 
   const formatTime = () => {
-    if (minutes > 0) {
-      return `${minutes}:${displaySeconds.toString().padStart(2, "0")}.${tenths}`;
-    }
-    return `${displaySeconds}.${tenths}`;
+    return `${minutes}:${displaySeconds.toString().padStart(2, "0")}`;
   };
 
   return (

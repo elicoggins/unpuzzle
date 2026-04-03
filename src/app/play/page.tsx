@@ -271,8 +271,8 @@ export default function PlayPage() {
   const sessionACPL =
     sessionScores.length > 0
       ? Math.round(
-          (sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length) * 10
-        ) / 10
+          sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length
+        )
       : null;
 
   const puzzleMoveNumber = position?.moveNumber ?? 1;
@@ -316,10 +316,10 @@ export default function PlayPage() {
   }, [gameState, feedback, lastPlayedUci]);
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 gap-4">
+    <div className="flex-1 flex items-start justify-center p-4 pt-4 gap-4">
       {/* ── Left Panel ── */}
       <div
-        className="flex flex-col gap-3 self-stretch justify-center"
+        className="flex flex-col gap-3"
         style={{ width: 220 }}
       >
         {/* Puzzle info */}
@@ -374,6 +374,17 @@ export default function PlayPage() {
           <div className="flex justify-between items-baseline">
             <Timer key={timerKey} isRunning={timerRunning} />
           </div>
+          {sessionScores.length > 0 && (
+            <button
+              onClick={() => {
+                setSessionScores([]);
+                try { localStorage.removeItem("session-scores"); } catch {}
+              }}
+              className="w-full text-xs text-text-muted hover:text-text-secondary border border-border hover:border-border-hover rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+            >
+              reset session
+            </button>
+          )}
         </div>
 
         {/* Engine status */}
@@ -407,6 +418,7 @@ export default function PlayPage() {
             allowDragging={gameState === "playing"}
             arrows={boardArrows}
             squareStyles={squareStyles}
+            boardKey={position?.id}
           />
 
           {/* Loading overlay */}
@@ -435,7 +447,7 @@ export default function PlayPage() {
 
       {/* ── Right Panel ── */}
       <div
-        className="flex flex-col gap-3 self-stretch justify-center"
+        className="flex flex-col gap-3"
         style={{ width: 240 }}
       >
         {/* Move history */}
