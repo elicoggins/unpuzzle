@@ -210,8 +210,12 @@ export default function PlayPage() {
         setEngineDepth(update);
       });
 
-      // 5. Also evaluate position after the best move (if different from user's move)
-      let evalAfterBestCp = evalBefore.eval; // default: same as position eval
+      // 5. Compute post-move eval from original side's perspective
+      const evalAfterFromOrigPerspective = -evalAfter.eval;
+
+      // 6. Evaluate position after the best move (for accurate CPL reference)
+      // Default: user played best move → reference = their result → CPL = 0
+      let evalAfterBestCp = evalAfterFromOrigPerspective;
       if (evalBefore.bestMove && evalBefore.bestMove.length >= 4 && evalBefore.bestMove !== uciMove) {
         const bestGame = new Chess(originalFen);
         bestGame.move({
@@ -225,9 +229,8 @@ export default function PlayPage() {
         evalAfterBestCp = -evalAfterBestResult.eval;
       }
 
-      // 6. Compute centipawn loss
-      const evalAfterFromOrigPerspective = -evalAfter.eval;
-      const centipawnLoss = Math.max(0, evalBefore.eval - evalAfterFromOrigPerspective);
+      // 7. CPL = best achievable outcome minus actual outcome (both from original STM perspective)
+      const centipawnLoss = Math.max(0, evalAfterBestCp - evalAfterFromOrigPerspective);
 
       // Update eval bar to reflect post-move position
       const postMoveWhiteEval = sideToMove === "w" ? evalAfterFromOrigPerspective : -evalAfterFromOrigPerspective;
@@ -921,6 +924,7 @@ export default function PlayPage() {
                 centipawnLoss={feedback.centipawnLoss}
                 bestMoveSan={feedback.bestMoveSan}
                 evalBefore={feedback.evalBefore}
+                evalAfterBest={feedback.evalAfterBest}
                 evalAfterPlayed={feedback.evalAfterPlayed}
                 isMateBefore={feedback.isMateBefore}
                 mateInBefore={feedback.mateInBefore}

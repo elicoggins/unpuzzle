@@ -49,14 +49,16 @@ function uciToSan(fen: string, uciMoves: string[]): string[] {
 export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: EngineLinesProps) {
   const displayLines = useMemo(() => {
     const stm = fen.split(" ")[1] ?? "w";
-    return lines.map((line) => {
-      const sanMoves = uciToSan(fen, line.pv);
-      // Convert to white's perspective (standard convention: + = white winning, − = black winning)
-      const displayEval = stm === "b" ? -line.eval : line.eval;
-      const displayMateIn =
-        line.isMate && line.mateIn != null && stm === "b" ? -line.mateIn : line.mateIn;
-      return { ...line, sanMoves, displayEval, displayMateIn };
-    });
+    return lines
+      .map((line) => {
+        const sanMoves = uciToSan(fen, line.pv);
+        // Convert to white's perspective (standard convention: + = white winning, − = black winning)
+        const displayEval = stm === "b" ? -line.eval : line.eval;
+        const displayMateIn =
+          line.isMate && line.mateIn != null && stm === "b" ? -line.mateIn : line.mateIn;
+        return { ...line, sanMoves, displayEval, displayMateIn };
+      })
+      .sort((a, b) => a.multipv - b.multipv);
   }, [fen, lines]);
 
   if (lines.length === 0) return null;
@@ -78,10 +80,10 @@ export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: Eng
         {displayLines.map((line, i) => {
           const evalColor =
             line.displayEval > 0
-              ? "text-white bg-white/10"
+              ? "text-gray-900 bg-white/85"
               : line.displayEval < 0
-                ? "text-text-muted bg-black/20"
-                : "text-text-secondary bg-white/5";
+                ? "text-white/60 bg-black/40"
+                : "text-text-secondary bg-white/10";
 
           return (
             <div key={i} className="flex items-start gap-2 px-3 py-1.5">

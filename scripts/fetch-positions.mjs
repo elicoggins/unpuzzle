@@ -22,6 +22,30 @@ function phaseFromMoveNum(n) {
   return "endgame";
 }
 
+/** Rough material count to detect true endgames regardless of move number */
+function materialCount(fen) {
+  const board = fen.split(" ")[0];
+  let total = 0;
+  for (const ch of board) {
+    switch (ch.toLowerCase()) {
+      case "q": total += 9; break;
+      case "r": total += 5; break;
+      case "b": case "n": total += 3; break;
+      case "p": total += 1; break;
+    }
+  }
+  return total;
+}
+
+function phaseFromPosition(fen) {
+  const moveNum = moveNumFromFen(fen);
+  const mat = materialCount(fen);
+  if (moveNum <= 10) return "opening";
+  if (mat <= 26) return "endgame";      // queen gone or heavy piece exchange
+  if (mat <= 46) return "middlegame";   // late middlegame
+  return "middlegame";
+}
+
 async function safeFetch(url, opts = {}) {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(12000), ...opts });
@@ -43,9 +67,7 @@ function fenFromSanMoves(sanMovesStr) {
   return chess.fen();
 }
 
-// ── 1. Lichess puzzle/next (unauthenticated) ──────────────────────────────────
-// The response contains game.pgn (all SAN moves up to and including the move
-// that creates the puzzle position). Apply them all to get the FEN.
+// ── 1. Lichess puzzle/next ──────────────────────────────────────────────────
 
 async function fetchOnePuzzle() {
   const res = await safeFetch("https://lichess.org/api/puzzle/next", {
@@ -69,7 +91,7 @@ async function fetchOnePuzzle() {
   };
 }
 
-// ── 2. Game export ────────────────────────────────────────────────────────────
+// ── 2. Game export ──────────────────────────────────────────────────────────
 
 async function fetchUserGames(username, max = 15, perfType = "blitz,rapid,classical") {
   const params = new URLSearchParams({
@@ -105,50 +127,67 @@ function extractPositionFromGame(game, targetPly) {
     fen,
     sideToMove: sideFromFen(fen),
     opening: game.opening?.name ?? null,
-    phase: phaseFromMoveNum(moveNum),
+    phase: phaseFromPosition(fen),
     moveNumber: moveNum,
   };
 }
 
-// ── 3. Hard-curated tricky positions ─────────────────────────────────────────
-// Positions from famous games where an obvious-looking move doesn't work,
-// including failed sacrifices, traps, and deceptive imbalances.
-// All are real positions from well-known games.
-
-const TRICKY_POSITIONS = [
-  // Failed Greek Gift — Bxh7 tempting but black defends
-  { fen: "r2q1rk1/ppp2ppp/2n2n2/4pb2/2B1P1b1/2NP1N2/PPP2PPP/R1BQR1K1 w - - 2 9", sideToMove: "w", opening: "Italian Game", phase: "middlegame", moveNumber: 9, category: "tricky" },
-  // Scholar's mate attempt after Nc6 — Qxf7 fails
-  { fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 4 4", sideToMove: "w", opening: "Italian: Scholar's Trap", phase: "opening", moveNumber: 4, category: "tricky" },
-  // Fried Liver Attack — Nxf7 sacrifice, black can defend accurately
-  { fen: "r1bqkb1r/ppp2ppp/2np1n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5", sideToMove: "w", opening: "Italian: Two Knights", phase: "opening", moveNumber: 5, category: "tricky" },
-  // Poisoned pawn Najdorf — Qxb2 is playable but looks suicidal
-  { fen: "rnb1kb1r/1p2pppp/p2p1n2/q7/3NP3/2N5/PPP1BPPP/R1BQK2R w KQkq - 1 8", sideToMove: "w", opening: "Sicilian Najdorf: Poisoned Pawn", phase: "opening", moveNumber: 8, category: "tricky" },
-  // Légall's Mate setup — only works if bishop takes knight, otherwise it fails
-  { fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/3P1N2/PPP2PPP/RNBQKB1R w KQkq - 2 4", sideToMove: "w", opening: "King's Pawn: Damiano-style Trap", phase: "opening", moveNumber: 4, category: "tricky" },
-  // Petrov counter-attack — Nxe5 looks winning for white but black can equalize
-  { fen: "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3", sideToMove: "w", opening: "Petrov's Defense", phase: "opening", moveNumber: 3, category: "tricky" },
-  // Traxler/Wilkes-Barre — black sacrifices bishop, position is wild
-  { fen: "r1bqk2r/pppp1Bpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq - 0 5", sideToMove: "b", opening: "Traxler Counterattack", phase: "opening", moveNumber: 5, category: "tricky" },
-  // Four Knights — Nd5 fork looks winning but is not decisive
-  { fen: "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 4 4", sideToMove: "w", opening: "Four Knights Game", phase: "opening", moveNumber: 4, category: "tricky" },
-  // Sicilian Dragon — Bxh7 sacrifice looks crushing but fails to Kxh7 Ng5+ Kg8
-  { fen: "r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/2KR1B1R w - - 2 11", sideToMove: "w", opening: "Sicilian Dragon", phase: "middlegame", moveNumber: 11, category: "tricky" },
-  // Caro-Kann advance — f3 pawn push looks strong but gives away d4
-  { fen: "rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR w KQkq - 0 4", sideToMove: "w", opening: "Caro-Kann: Advance", phase: "opening", moveNumber: 4, category: "tricky" },
-  // King's Gambit accepted — material grab looks good but development lags
-  { fen: "rnbqkbnr/pppp1p1p/8/6p1/4Pp2/5N2/PPPP2PP/RNBQKB1R w KQkq g6 0 4", sideToMove: "w", opening: "King's Gambit: Kieseritzky", phase: "opening", moveNumber: 4, category: "tricky" },
-  // Muzio Gambit — white sacrifices knight for attack, unclear
-  { fen: "rnbqkb1r/pppp1ppp/5n2/4p3/4PP2/8/PPPP2PP/RNBQKBNR w KQkq - 1 3", sideToMove: "w", opening: "King's Gambit", phase: "opening", moveNumber: 3, category: "tricky" },
-  // Meran Variation — d4-d5 pawn break looks premature but has nuance
-  { fen: "r1bqkb1r/pp1n1ppp/2p1pn2/3p4/2PP4/2NBPN2/PP3PPP/R1BQK2R b KQkq - 3 7", sideToMove: "b", opening: "Semi-Slav: Meran", phase: "opening", moveNumber: 7, category: "tricky" },
-  // Ruy Lopez Marshall — sacrificial attack that is actually sound
-  { fen: "r1bq1rk1/ppp2ppp/2nb4/3Pp3/5n2/2N2N2/PPPBBPPP/R2QK2R w KQ - 0 10", sideToMove: "w", opening: "Ruy Lopez: Marshall Attack", phase: "middlegame", moveNumber: 10, category: "tricky" },
-  // QGD Orthodox — Nxe4 looks like a blunder but leads to complicated play
-  { fen: "rnbq1rk1/ppp1bppp/4pn2/3p4/2PP4/2NBPN2/PP3PPP/R1BQK2R b KQ - 5 7", sideToMove: "b", opening: "QGD: Orthodox Defense", phase: "opening", moveNumber: 7, category: "tricky" },
+// ── 3. Tricky positions — fetched from Lichess puzzle themes ────────────────
+// Themes chosen because they surface positions where the "obvious" move is
+// wrong or counterintuitive: sacrifices, equality fights, trapping ideas.
+const TRICKY_THEMES = [
+  "equality",       // find the move that merely holds, not a flashy win
+  "advantage",      // small edge — positional, not tactical
+  "sacrifice",      // a real sacrifice is required (or tempting but wrong)
+  "trapping",       // trapping an enemy piece
+  "deflection",     // deflect a key defender
+  "decoy",          // lure the king/piece to a bad square
+  "interference",   // interference tactic
+  "zugzwang",       // being forced to move is the problem
 ];
 
-// ── main ─────────────────────────────────────────────────────────────────────
+async function fetchPuzzleByTheme(theme) {
+  const res = await safeFetch(
+    `https://lichess.org/api/puzzle/next?angle=${theme}`,
+    { headers: { Accept: "application/json" } }
+  );
+  if (!res) return null;
+  const data = await res.json();
+  const pgn = data.game?.pgn;
+  if (!pgn) return null;
+  const fen = fenFromSanMoves(pgn);
+  const moveNum = moveNumFromFen(fen);
+  return {
+    fen,
+    sideToMove: sideFromFen(fen),
+    opening: null,
+    phase: phaseFromMoveNum(moveNum),
+    moveNumber: moveNum,
+    category: "tricky",
+  };
+}
+
+// ── player lists ────────────────────────────────────────────────────────────
+// Verified titled players (GMs/IMs) active on Lichess
+
+// Primarily for middlegame sampling — online GMs with lots of rapid/blitz
+const GM_MIDDLEGAME = [
+  "nihalsarin", "DanielNaroditsky", "penguingim1", "AnishGiri", "FabianoCaruana",
+  "alireza2003", "DrNykterstein", "vincentkeymer", "BogdanDeac", "RaunakSadhwani",
+  "JGBT", "lovlas", "LyonBeast", "GMHikaru", "Nodirbek",
+  "Zhigalko_Sergei", "MateusCFernandes",
+];
+
+// Primarily for endgame sampling — classical/rapid games that consistently
+// reach technical endgames
+const GM_ENDGAME = [
+  "DanielNaroditsky", "AnishGiri", "alireza2003", "DrNykterstein",
+  "lovlas", "GMHikaru", "Nodirbek", "Zhigalko_Sergei",
+  "nihalsarin", "penguingim1", "BogdanDeac", "RaunakSadhwani",
+  "LyonBeast", "MateusCFernandes", "RebeccaHarris",
+];
+
+// ── main ────────────────────────────────────────────────────────────────────
 
 async function main() {
   const allPositions = [];
@@ -163,44 +202,43 @@ async function main() {
     }
   }
 
-  // ── Tactical puzzles: call puzzle/next repeatedly ──
+  // ── Tactical puzzles ──────────────────────────────────────────────────
   process.stderr.write("Fetching tactical puzzles…\n");
-  for (let i = 0; i < 55; i++) {
+  for (let i = 0; i < 60; i++) {
     add(await fetchOnePuzzle());
     await delay(DELAY_MS);
-    if ((i + 1) % 10 === 0) process.stderr.write(`  ${i + 1} puzzles fetched, ${allPositions.length} total\n`);
   }
+  process.stderr.write(`After puzzles: ${allPositions.length}\n`);
 
-  // ── Balanced middlegames from real games ──
-  process.stderr.write("Fetching balanced middlegame positions…\n");
-  const balancedPlayers = ["nihalsarin", "DanielNaroditsky", "penguingim1", "AnishGiri", "FabianoCaruana"];
-  for (const player of balancedPlayers) {
-    const games = await fetchUserGames(player, 15);
+  // ── Middlegame positions from master games ────────────────────────────────
+  // Sample at plies 25, 33, 41 — broad middlegame window
+  process.stderr.write("Fetching GM middlegame positions…\n");
+  for (const player of GM_MIDDLEGAME) {
+    const games = await fetchUserGames(player, 18, "blitz,rapid,classical");
     await delay(DELAY_MS);
-    for (const game of games.slice(0, 12)) {
+    for (const game of games.slice(0, 15)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
       if (moves.length < 30) continue;
-      // Two samples per game: one at ply 24-26, one at ply 32-36
-      for (const ply of [25, 33]) {
+      for (const ply of [25, 33, 41]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
-        if (pos) add({ ...pos, category: "balanced" });
+        if (pos && pos.phase === "middlegame") add({ ...pos, category: "balanced" });
       }
     }
+    process.stderr.write(`  ${player} → ${allPositions.length} total\n`);
   }
-  process.stderr.write(`After balanced: ${allPositions.length}\n`);
+  process.stderr.write(`After GM middlegames: ${allPositions.length}\n`);
 
-  // ── Critical positions (sharp, late-middlegame) ──
-  process.stderr.write("Fetching critical positions…\n");
-  const criticalPlayers = ["MateusCFernandes", "alireza2003", "lovlas", "rebeccaharris"];
-  for (const player of criticalPlayers) {
-    const games = await fetchUserGames(player, 15);
+  // ── Late middlegame / critical positions ──────────────────────────────────
+  // Sample at plies 38-50 — positions where games are decided
+  process.stderr.write("Fetching critical/sharp middlegame positions…\n");
+  for (const player of GM_MIDDLEGAME.slice(0, 10)) {
+    const games = await fetchUserGames(player, 15, "rapid,classical");
     await delay(DELAY_MS);
     for (const game of games.slice(0, 12)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
-      if (moves.length < 36) continue;
-      // Slightly later in game = more critical/sharp
-      for (const ply of [35, 43]) {
+      if (moves.length < 44) continue;
+      for (const ply of [39, 47]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
         if (pos) add({ ...pos, category: "critical" });
@@ -209,26 +247,35 @@ async function main() {
   }
   process.stderr.write(`After critical: ${allPositions.length}\n`);
 
-  // ── Endgame positions ──
-  process.stderr.write("Fetching endgame positions…\n");
-  const endgamePlayers = ["DanielNaroditsky", "AnishGiri", "Watneg"];
-  for (const player of endgamePlayers) {
-    const games = await fetchUserGames(player, 12, "classical,rapid");
+  // ── Endgame positions from classical/rapid master games ───────────────────
+  // Use high ply samples (55-85) and filter by material-based phase detection
+  process.stderr.write("Fetching GM endgame positions…\n");
+  for (const player of GM_ENDGAME) {
+    const games = await fetchUserGames(player, 18, "classical,rapid");
     await delay(DELAY_MS);
-    for (const game of games.slice(0, 10)) {
+    for (const game of games.slice(0, 15)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
-      if (moves.length < 50) continue;
-      for (const ply of [55, 65]) {
+      if (moves.length < 56) continue;
+      for (const ply of [55, 63, 71, 81]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
-        if (pos) add({ ...pos, category: "endgame" });
+        // Use material-based check: only include true endgames
+        if (pos && materialCount(pos.fen) <= 34) add({ ...pos, category: "endgame" });
       }
     }
+    process.stderr.write(`  ${player} → ${allPositions.length} total\n`);
   }
   process.stderr.write(`After endgames: ${allPositions.length}\n`);
 
-  // ── Tricky curated ──
-  add(TRICKY_POSITIONS);
+  // ── Tricky positions from Lichess puzzle themes ──────────────────────────
+  process.stderr.write("Fetching tricky/thematic puzzles…\n");
+  for (let round = 0; round < 4; round++) {
+    for (const theme of TRICKY_THEMES) {
+      add(await fetchPuzzleByTheme(theme));
+      await delay(DELAY_MS);
+    }
+  }
+  process.stderr.write(`After tricky: ${allPositions.length}\n`);
 
   process.stderr.write(`\nTotal unique positions: ${allPositions.length}\n`);
   process.stderr.write(`  tactical: ${allPositions.filter(p => p.category === "tactical").length}\n`);
@@ -237,7 +284,7 @@ async function main() {
   process.stderr.write(`  endgame:  ${allPositions.filter(p => p.category === "endgame").length}\n`);
   process.stderr.write(`  tricky:   ${allPositions.filter(p => p.category === "tricky").length}\n`);
 
-  // ── Emit TypeScript ───────────────────────────────────────────────────────
+  // ── Emit TypeScript ────────────────────────────────────────────────────────
 
   const lines = [
     `import type { Position } from "./types";`,
@@ -247,10 +294,10 @@ async function main() {
     `//`,
     `// Categories:`,
     `//   tactical  — clear winning move / combination`,
-    `//   balanced  — roughly equal; find a good positional move`,
-    `//   critical  — few good moves, many losing (sharp middlegames)`,
+    `//   balanced  — roughly equal middlegame; find a good positional move`,
+    `//   critical  — late middlegame, few good moves, many losing`,
     `//   tricky    — looks like a tactic but isn't, or vice versa`,
-    `//   endgame   — technical endgame`,
+    `//   endgame   — technical endgame from master games`,
     ``,
     `// DO NOT EDIT BY HAND — regenerate with: node scripts/fetch-positions.mjs > src/lib/curated-positions.ts`,
     ``,
@@ -270,7 +317,7 @@ async function main() {
   lines.push(`];`);
   lines.push(``);
   lines.push(`const WEIGHTS: Record<PositionCategory, number> = {`);
-  lines.push(`  tactical: 0.25, balanced: 0.25, critical: 0.25, tricky: 0.15, endgame: 0.10,`);
+  lines.push(`  tactical: 0.10, balanced: 0.30, critical: 0.25, tricky: 0.10, endgame: 0.25,`);
   lines.push(`};`);
   lines.push(``);
   lines.push(`export function getWeightedRandomPosition(): CuratedPosition & { id: string } {`);

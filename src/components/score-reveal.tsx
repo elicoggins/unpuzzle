@@ -7,6 +7,7 @@ interface ScoreRevealProps {
   centipawnLoss: number;
   bestMoveSan: string;
   evalBefore: number;
+  evalAfterBest: number;
   evalAfterPlayed: number;
   isMateBefore: boolean;
   mateInBefore: number | null;
@@ -29,6 +30,7 @@ export function ScoreReveal({
   centipawnLoss,
   bestMoveSan,
   evalBefore,
+  evalAfterBest,
   evalAfterPlayed,
   isMateBefore,
   mateInBefore,
@@ -50,14 +52,12 @@ export function ScoreReveal({
 
   const accuracy = isMateCase
     ? 0
-    : computeMoveAccuracy(evalBefore, evalAfterPlayed, sideToMove);
+    : computeMoveAccuracy(evalAfterBest, evalAfterPlayed, sideToMove);
 
   const headline = youBlunderedMate
     ? "You blundered mate!"
     : youHadMate
     ? "You missed mate!"
-    : glyph
-    ? `${label} ${glyph}`
     : label;
 
   return (
@@ -75,10 +75,22 @@ export function ScoreReveal({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 15 }}
-            className="text-xl font-bold font-[family-name:var(--font-mono)] text-center"
-            style={{ color }}
+            className="flex items-center gap-2"
           >
-            {headline}
+            <span
+              className="text-xl font-bold font-[family-name:var(--font-mono)] text-center"
+              style={{ color }}
+            >
+              {headline}
+            </span>
+            {glyph && !isMateCase && (
+              <span
+                className="text-sm font-bold font-[family-name:var(--font-mono)] rounded-full border-2 w-8 h-8 flex items-center justify-center shrink-0"
+                style={{ color, borderColor: color }}
+              >
+                {glyph}
+              </span>
+            )}
           </motion.div>
 
           {/* Two metric chips */}
