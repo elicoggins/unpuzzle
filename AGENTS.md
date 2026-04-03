@@ -10,9 +10,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## What It Is
 
-Unpuzzle is a chess training app with an inverted premise: instead of solving puzzles with a known answer, you are shown a real master-game position and asked to find **your** best move. The engine then evaluates your choice and scores it — no "wrong answer" screen, just honest feedback on how good your move actually was.
+Chess puzzle apps suffer a common problem. Users know they're grinding puzzles, so they calculate tactics and sacrifices far more willingly than they would in a standard timed game.
 
-Sometimes, you will be presented a real puzzle. Sometimes, you'll get a critical position with a few winning moves. This solve the issue of puzzle sites causing you to calculate sacrifices and other tactics more than you would in a normal game.
+This app addresses that issue by presenting an unmarked position. Sometimes, it will be a puzzle with a tactic present. Sometimes, it might be a sharp position with a couple winning moves. Sometimes it will be completely balanced and a simple developing move is advisable. 
+
+Study the position, determine what you think is a good move. Stockfish evaluates your choice and scores it against the best move in the position.
 
 ## Tech Stack
 
