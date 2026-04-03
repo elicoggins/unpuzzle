@@ -25,21 +25,3 @@ export interface EvalFeedback {
   /** Mate in N for "before" position */
   mateInBefore: number | null;
 }
-
-export interface Attempt {
-  id: string;
-  userId: string;
-  positionId: string;
-  playedMove: string;
-  centipawnLoss: number;
-  timeSpentMs: number;
-  createdAt: Date;
-}
-
-export interface UserStats {
-  totalAttempts: number;
-  runningACPL: number;
-  bestSessionACPL: number | null;
-  currentStreak: number;
-  longestStreak: number;
-}

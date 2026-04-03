@@ -9,6 +9,7 @@ import { Timer } from "@/components/timer";
 import { ScoreReveal } from "@/components/score-reveal";
 import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@/lib/chess-engine";
 import { getScoreArrowColor } from "@/lib/scoring";
+import { getRandomPosition } from "@/lib/sample-positions";
 import type { Position, EvalFeedback } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow } from "react-chessboard";
 
@@ -34,7 +35,13 @@ export default function PlayPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [sessionScores, setSessionScores] = useState<number[]>([]);
+  const [sessionScores, setSessionScores] = useState<number[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("session-scores");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
   const [boardSize, setBoardSize] = useState(400);
   const [engineDepth, setEngineDepth] = useState<DepthUpdate | null>(null);
   const [engineReady, setEngineReady] = useState(false);
@@ -65,7 +72,7 @@ export default function PlayPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const loadPosition = useCallback(async () => {
+  const loadPosition = useCallback(() => {
     setGameState("loading");
     setFeedback(null);
     setMoveHistory([]);
@@ -74,23 +81,18 @@ export default function PlayPage() {
     setLastPlayedUci(null);
     setTimerKey((k) => k + 1);
 
-    try {
-      const res = await fetch("/api/positions/next");
-      const data: Position = await res.json();
+    const data = getRandomPosition();
 
-      setPosition(data);
+    setPosition(data);
 
-      const game = new Chess(data.fen);
-      gameRef.current = game;
+    const game = new Chess(data.fen);
+    gameRef.current = game;
 
-      setFen(data.fen);
-      setBoardOrientation(data.sideToMove === "w" ? "white" : "black");
-      setGameState("playing");
-      setTimerRunning(true);
-      startTimeRef.current = Date.now();
-    } catch (err) {
-      console.error("Failed to load position:", err);
-    }
+    setFen(data.fen);
+    setBoardOrientation(data.sideToMove === "w" ? "white" : "black");
+    setGameState("playing");
+    setTimerRunning(true);
+    startTimeRef.current = Date.now();
   }, []);
 
   useEffect(() => {
@@ -223,7 +225,11 @@ export default function PlayPage() {
       };
 
       setFeedback(result);
-      setSessionScores((prev) => [...prev, centipawnLoss]);
+      setSessionScores((prev) => {
+        const next = [...prev, centipawnLoss];
+        try { localStorage.setItem("session-scores", JSON.stringify(next)); } catch {}
+        return next;
+      });
       setGameState("scored");
       setEngineDepth(null);
     },
