@@ -516,7 +516,7 @@ export default function PlayPage() {
               />
               <button
                 onClick={loadPosition}
-                className="w-full mt-2 px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200"
+                className="w-full mt-2 px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
               >
                 next
               </button>

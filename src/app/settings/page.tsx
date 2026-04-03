@@ -3,11 +3,19 @@
 import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "accent-color";
+const FONT_KEY = "heading-font";
 
 const PRESETS = [
   { name: "Green", accent: "#39ff14", accentHover: "#6fff52" },
   { name: "Gold", accent: "#ffd700", accentHover: "#ffe44d" },
   { name: "Pink", accent: "#ff2d95", accentHover: "#ff6db5" },
+];
+
+const FONT_OPTIONS = [
+  { name: "Orbitron", cssVar: "--font-orbitron" },
+  { name: "Space Grotesk", cssVar: "--font-space-grotesk" },
+  { name: "Audiowide", cssVar: "--font-audiowide" },
+  { name: "Press Start 2P", cssVar: "--font-press-start" },
 ];
 
 function hexToHsl(hex: string): [number, number, number] {
@@ -98,9 +106,16 @@ export default function SettingsPage() {
     index: 0,
   });
   const [mounted, setMounted] = useState(false);
+  const [selectedFont, setSelectedFont] = useState("--font-orbitron");
 
   useEffect(() => {
     setChoice(loadChoice());
+    try {
+      const storedFont = localStorage.getItem(FONT_KEY);
+      if (storedFont) setSelectedFont(storedFont);
+    } catch {
+      // ignore
+    }
     setMounted(true);
   }, []);
 
@@ -114,6 +129,14 @@ export default function SettingsPage() {
     const next: AccentChoice = { type: "custom", color };
     setChoice(next);
     saveAndApply(next);
+  }
+
+  function selectFont(cssVar: string) {
+    setSelectedFont(cssVar);
+    localStorage.setItem(FONT_KEY, cssVar);
+    window.dispatchEvent(
+      new CustomEvent("font-change", { detail: { fontVar: cssVar } })
+    );
   }
 
   const currentAccent = resolveAccent(choice).accent;
@@ -244,6 +267,51 @@ export default function SettingsPage() {
                 style={{ background: currentAccent }}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Font */}
+        <div className="border border-border rounded-lg p-6 space-y-6">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+            font
+          </h2>
+          <div className="flex flex-col gap-3">
+            {FONT_OPTIONS.map((font) => {
+              const isActive = selectedFont === font.cssVar;
+              return (
+                <button
+                  key={font.cssVar}
+                  onClick={() => selectFont(font.cssVar)}
+                  className="flex items-center justify-between px-4 py-3 rounded-lg border transition-colors cursor-pointer text-left"
+                  style={{
+                    borderColor: isActive
+                      ? currentAccent
+                      : "var(--color-border)",
+                    background: isActive
+                      ? `${currentAccent}15`
+                      : "transparent",
+                  }}
+                >
+                  <span
+                    className="text-base font-medium"
+                    style={{
+                      fontFamily: `var(${font.cssVar})`,
+                      color: isActive
+                        ? currentAccent
+                        : "var(--color-text-primary)",
+                    }}
+                  >
+                    {font.name}
+                  </span>
+                  <span
+                    className="text-sm text-text-muted"
+                    style={{ fontFamily: `var(${font.cssVar})` }}
+                  >
+                    the quick brown fox
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

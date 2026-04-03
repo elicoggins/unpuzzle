@@ -1,16 +1,33 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono, Orbitron, Press_Start_2P, Audiowide } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { AccentProvider } from "@/components/accent-provider";
 
 const spaceGrotesk = Space_Grotesk({
-  variable: "--font-heading",
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
+  subsets: ["latin"],
+});
+
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
+  subsets: ["latin"],
+});
+
+const pressStart2P = Press_Start_2P({
+  variable: "--font-press-start",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+const audiowide = Audiowide({
+  variable: "--font-audiowide",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -27,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${orbitron.variable} ${pressStart2P.variable} ${audiowide.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg-primary text-text-primary font-[family-name:var(--font-heading)]">
         <AccentProvider />
