@@ -44,6 +44,8 @@ export default function PlayPage() {
   const [engineLines, setEngineLines] = useState<EngineLine[]>([]);
   const [lastPlayedUci, setLastPlayedUci] = useState<string | null>(null);
   const [pendingMove, setPendingMove] = useState<{ uci: string; san: string } | null>(null);
+  const [browsePath, setBrowsePath] = useState<{ san: string; fen: string }[]>([]);
+  const [browseIdx, setBrowseIdx] = useState<number | null>(null);
   const [legalMoveSquares, setLegalMoveSquares] = useState<string[]>([]);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const selectedSquareRef = useRef<string | null>(null);
@@ -92,6 +94,8 @@ export default function PlayPage() {
     setEngineLines([]);
     setLastPlayedUci(null);
     setPendingMove(null);
+    setBrowsePath([]);
+    setBrowseIdx(null);
     setLegalMoveSquares([]);
     setSelectedSquare(null);
     selectedSquareRef.current = null;
@@ -315,11 +319,40 @@ export default function PlayPage() {
     setFen(position.fen);
     setMoveHistory([]);
     setPendingMove(null);
+    setBrowsePath([]);
+    setBrowseIdx(null);
     setLegalMoveSquares([]);
     setSelectedSquare(null);
     selectedSquareRef.current = null;
     setGameState("playing");
   }, [position]);
+
+  const onEngineLineMoveClick = useCallback(
+    (lineIdx: number, moveIdx: number) => {
+      if (!position || !engineLines[lineIdx] || gameState !== "scored") return;
+      const pv = engineLines[lineIdx].pv;
+      const path: { san: string; fen: string }[] = [];
+      const game = new Chess(position.fen);
+      for (let i = 0; i <= moveIdx && i < pv.length; i++) {
+        const uci = pv[i];
+        if (uci.length < 4) break;
+        try {
+          const m = game.move({
+            from: uci.slice(0, 2),
+            to: uci.slice(2, 4),
+            promotion: uci.length > 4 ? uci[4] : undefined,
+          });
+          if (!m) break;
+          path.push({ san: m.san, fen: game.fen() });
+        } catch { break; }
+      }
+      if (path.length > 0) {
+        setBrowsePath(path);
+        setBrowseIdx(path.length - 1);
+      }
+    },
+    [position, engineLines, gameState]
+  );
 
   const sessionACPL =
     sessionScores.length > 0
@@ -391,6 +424,16 @@ export default function PlayPage() {
 
     return styles;
   }, [legalMoveSquares, selectedSquare, gameState, feedback, lastPlayedUci]);
+
+  const displayFen = useMemo(() => {
+    if (browseIdx === null) return fen;
+    if (browseIdx < 0) return position?.fen ?? fen;
+    return browsePath[browseIdx]?.fen ?? fen;
+  }, [browseIdx, browsePath, fen, position]);
+
+  const displayArrows = useMemo(() => browseIdx !== null ? [] : boardArrows, [browseIdx, boardArrows]);
+
+  const displaySquareStyles = useMemo(() => browseIdx !== null ? {} : squareStyles, [browseIdx, squareStyles]);
 
   const onSquareMouseDown = useCallback(
     ({ piece, square }: SquareHandlerArgs) => {
@@ -538,14 +581,14 @@ export default function PlayPage() {
           style={{ width: boardSize, height: boardSize }}
         >
           <ChessBoard
-            position={fen}
+            position={displayFen}
             onPieceDrop={onPieceDrop}
             onSquareMouseDown={onSquareMouseDown}
             onSquareClick={onSquareClick}
             boardOrientation={boardOrientation}
             allowDragging={gameState === "playing"}
-            arrows={boardArrows}
-            squareStyles={squareStyles}
+            arrows={displayArrows}
+            squareStyles={displaySquareStyles}
             boardKey={position?.id}
           />
 
@@ -584,7 +627,7 @@ export default function PlayPage() {
       {/* ── Right Panel ── */}
       <div
         className="flex flex-col gap-3"
-        style={{ width: 240 }}
+        style={{ width: 280 }}
       >
         {/* Move history */}
         <div className="border border-border rounded-lg flex flex-col overflow-hidden" style={{ height: 200 }}>
@@ -595,20 +638,122 @@ export default function PlayPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {position && (
-              <div className="text-xs font-[family-name:var(--font-mono)] text-text-muted italic px-2 py-1">
+              <div
+                className={`text-xs font-[family-name:var(--font-mono)] italic px-2 py-1 transition-colors ${
+                  gameState === "scored" || browseIdx !== null
+                    ? "text-text-muted cursor-pointer hover:text-text-secondary"
+                    : "text-text-muted"
+                }`}
+                onClick={() => {
+                  if (browseIdx === -1) {
+                    setBrowseIdx(null);
+                  } else if (browseIdx !== null || gameState === "scored") {
+                    setBrowsePath([]);
+                    setBrowseIdx(-1);
+                  }
+                }}
+              >
                 position at move {puzzleMoveNumber}
               </div>
             )}
-            {moveHistory.length > 0 && (
-              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 px-2 py-1">
+            {browseIdx === null && moveHistory.length > 0 && (
+              <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-0.5 px-2 py-1 items-center">
                 <span className="text-xs font-[family-name:var(--font-mono)] text-text-muted">
                   {puzzleMoveNumber}.
                 </span>
-                <span className="text-sm font-[family-name:var(--font-mono)] text-text-primary bg-accent/15 rounded px-1.5 py-0.5 -my-0.5">
-                  {moveHistory[0]}
-                </span>
+                {position?.sideToMove === "w" ? (
+                  <>
+                    <span
+                      className={`text-sm font-[family-name:var(--font-mono)] text-text-primary bg-accent/15 rounded px-1.5 py-0.5 transition-colors ${
+                        gameState === "scored" ? "cursor-pointer hover:bg-accent/25" : ""
+                      }`}
+                      onClick={() => {
+                        if (gameState !== "scored") return;
+                        setBrowsePath([{ san: moveHistory[0], fen }]);
+                        setBrowseIdx(0);
+                      }}
+                    >
+                      {moveHistory[0]}
+                    </span>
+                    <span />
+                  </>
+                ) : (
+                  <>
+                    <span />
+                    <span
+                      className={`text-sm font-[family-name:var(--font-mono)] text-text-primary bg-accent/15 rounded px-1.5 py-0.5 transition-colors ${
+                        gameState === "scored" ? "cursor-pointer hover:bg-accent/25" : ""
+                      }`}
+                      onClick={() => {
+                        if (gameState !== "scored") return;
+                        setBrowsePath([{ san: moveHistory[0], fen }]);
+                        setBrowseIdx(0);
+                      }}
+                    >
+                      {moveHistory[0]}
+                    </span>
+                  </>
+                )}
               </div>
             )}
+            {browseIdx !== null && (() => {
+              const rows: { moveNum: number; white: number | null; black: number | null }[] = [];
+              if (position?.sideToMove === "w") {
+                for (let i = 0; i < browsePath.length; i += 2) {
+                  rows.push({
+                    moveNum: puzzleMoveNumber + Math.floor(i / 2),
+                    white: i,
+                    black: i + 1 < browsePath.length ? i + 1 : null,
+                  });
+                }
+              } else {
+                if (browsePath.length > 0) rows.push({ moveNum: puzzleMoveNumber, white: null, black: 0 });
+                for (let i = 1; i < browsePath.length; i += 2) {
+                  rows.push({
+                    moveNum: puzzleMoveNumber + Math.ceil(i / 2),
+                    white: i,
+                    black: i + 1 < browsePath.length ? i + 1 : null,
+                  });
+                }
+              }
+              return rows.map((row, ri) => (
+                <div key={ri} className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-0.5 px-2 py-1 items-center">
+                  <span className="text-xs font-[family-name:var(--font-mono)] text-text-muted">
+                    {row.moveNum}.
+                  </span>
+                  {row.white !== null ? (
+                    <span
+                      className={`text-sm font-[family-name:var(--font-mono)] rounded px-1.5 py-0.5 cursor-pointer transition-colors ${
+                        row.white === browseIdx
+                          ? "text-text-primary bg-accent/15 hover:bg-accent/25"
+                          : "text-text-secondary hover:bg-border/30"
+                      }`}
+                      onClick={() => {
+                        setBrowsePath((prev) => prev.slice(0, row.white! + 1));
+                        setBrowseIdx(row.white!);
+                      }}
+                    >
+                      {browsePath[row.white].san}
+                    </span>
+                  ) : <span />}
+                  {row.black !== null ? (
+                    <span
+                      className={`text-sm font-[family-name:var(--font-mono)] rounded px-1.5 py-0.5 cursor-pointer transition-colors ${
+                        row.black === browseIdx
+                          ? "text-text-primary bg-accent/15 hover:bg-accent/25"
+                          : "text-text-secondary hover:bg-border/30"
+                      }`}
+                      onClick={() => {
+                        setBrowsePath((prev) => prev.slice(0, row.black! + 1));
+                        setBrowseIdx(row.black!);
+                      }}
+                    >
+                      {browsePath[row.black!].san}
+                    </span>
+                  ) : <span />}
+                </div>
+              ));
+            })()}
           </div>
         </div>
 
@@ -620,6 +765,7 @@ export default function PlayPage() {
               lines={engineLines}
               depth={engineDepth?.depth ?? feedback?.evalBefore ? 16 : 0}
               isSearching={gameState === "evaluating"}
+              onMoveClick={onEngineLineMoveClick}
             />
           ) : (
             <div className="border border-border rounded-lg overflow-hidden">

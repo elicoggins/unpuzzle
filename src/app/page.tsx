@@ -21,7 +21,7 @@ export default function Home() {
             play
           </Link>
           <p className="text-sm text-text-muted">
-            no account needed to start
+            no account needed
           </p>
         </div>
 
@@ -57,8 +57,7 @@ export default function Home() {
             </div>
           </div>
           <p className="text-xs text-text-muted pt-2">
-            Your <span className="font-[family-name:var(--font-mono)]">ACPL</span>{" "}
-            (Average Centipawn Loss) tracks your overall accuracy. Lower is better.
+            Your ACPL (Average Centipawn Loss) tracks your overall accuracy. Lower is better.
             Under 10 is elite.
           </p>
         </div>
