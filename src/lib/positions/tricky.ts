@@ -1,0 +1,37 @@
+import type { CuratedPosition } from "./index";
+
+// DO NOT EDIT BY HAND — regenerate with: node scripts/fetch-positions.mjs
+
+export const TRICKY_POSITIONS: CuratedPosition[] = [
+  { fen: "4rrk1/2q3p1/p2p3p/3P1R2/1PN5/3Q4/6PP/1R5K b - - 0 41", sideToMove: "b", opening: null, phase: "endgame", moveNumber: 41, category: "tricky" },
+  { fen: "4r1k1/6p1/p2p1p1p/3P1R2/2p3Pq/2P1r2P/P5QK/5R2 w - - 4 31", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 31, category: "tricky" },
+  { fen: "r1q2r1k/pp5p/2p2Pp1/3n4/1B6/2Q3P1/PP3P1P/3b1RK1 w - - 0 23", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 23, category: "tricky" },
+  { fen: "3k4/6R1/8/1K6/3P4/6p1/8/6r1 b - - 0 58", sideToMove: "b", opening: null, phase: "endgame", moveNumber: 58, category: "tricky" },
+  { fen: "3r1rk1/ppp2ppp/1b5q/8/2P1P1b1/2P2Q2/PP4PP/3RKR2 w - - 5 19", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 19, category: "tricky" },
+  { fen: "r2qk2r/pp3pb1/2p1pn2/3p4/6Qn/2NP3B/PPPB4/2KR3R w kq - 2 18", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 18, category: "tricky" },
+  { fen: "r2qkb2/pp1npbp1/2p1pn2/3p2Pr/3P4/3B4/PPP5/RNBQK1NR w KQq - 0 12", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 12, category: "tricky" },
+  { fen: "8/5p2/5kp1/7p/4K2P/6P1/5P2/8 w - - 1 45", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 45, category: "tricky" },
+  { fen: "r2qkb1r/pppB1p2/3p1P1p/4n3/8/2N4P/PPP2Pp1/R1BQR1K1 b kq - 0 12", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 12, category: "tricky" },
+  { fen: "R4b1r/1p1k1ppp/4pq2/2Pp1b2/1n2P3/2N2P2/2P3PP/Q3KBNR b K - 0 12", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 12, category: "tricky" },
+  { fen: "6rk/pbb2prp/4pQ2/8/5P1N/3p3R/PPq1N1PP/4R2K w - - 0 24", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 24, category: "tricky" },
+  { fen: "8/8/8/1K1kpPp1/p6p/P6P/1P4P1/8 b - - 0 39", sideToMove: "b", opening: null, phase: "endgame", moveNumber: 39, category: "tricky" },
+  { fen: "2k5/5pp1/KP2p1p1/8/5nPP/8/8/8 w - - 3 47", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 47, category: "tricky" },
+  { fen: "1R6/pp3pk1/7p/4qPp1/8/1P1Q2P1/P3rPBP/6K1 b - - 2 26", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 26, category: "tricky" },
+  { fen: "8/8/3kp1p1/2p5/5PP1/1P2K3/8/8 w - - 1 38", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 38, category: "tricky" },
+  { fen: "2kn1Rnr/p1pp2pp/1p2p3/4q3/4P3/2P5/P1P1B1PP/R2Q2K1 b - - 1 17", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 17, category: "tricky" },
+  { fen: "4rrk1/1p2bp2/2n1pn1p/p2p2p1/P1qP4/R1P2BBP/1P3PP1/2Q1R1K1 w - - 2 19", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 19, category: "tricky" },
+  { fen: "r5nr/pQpk1qpp/2n5/2b1p3/4P1b1/2P2N2/PP1P2PP/RNB1K2R w KQ - 1 10", sideToMove: "w", opening: null, phase: "opening", moveNumber: 10, category: "tricky" },
+  { fen: "r1b2rk1/ppp2ppp/2nbq3/4p3/3P4/PP2PN2/4BPPP/R1BQ1RK1 w - - 1 12", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 12, category: "tricky" },
+  { fen: "8/8/8/8/3Rb3/PK2k3/1Prp4/8 w - - 4 55", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 55, category: "tricky" },
+  { fen: "r1b1r1k1/ppp2ppp/3p4/4n3/3Q1B1q/8/PPP1BPPP/R3R1K1 w - - 2 14", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 14, category: "tricky" },
+  { fen: "r4r1R/ppk3p1/3R1p2/2n5/2PN2P1/4p3/PP3bK1/8 w - - 5 35", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 35, category: "tricky" },
+  { fen: "8/8/8/2pk4/Pp6/1P6/2K5/8 w - - 1 46", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 46, category: "tricky" },
+  { fen: "r4rk1/ppp2R1p/3p2p1/3P4/q5P1/P1PPQ2P/BP6/5RK1 b - - 0 23", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 23, category: "tricky" },
+  { fen: "8/6pk/2b3n1/5Q2/2rp4/P1r4P/5PP1/R5K1 w - - 2 37", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 37, category: "tricky" },
+  { fen: "4r3/p3rk1p/5p2/8/8/1P4Q1/P1q2PPP/R2R2K1 b - - 2 28", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 28, category: "tricky" },
+  { fen: "5r1k/p1p2p1p/2p1pqpQ/8/8/8/Pr4PP/5R1K w - - 0 26", sideToMove: "w", opening: null, phase: "middlegame", moveNumber: 26, category: "tricky" },
+  { fen: "6k1/1q4pp/5p2/2Qp4/p3rP2/P3P1B1/1n3RPP/6K1 w - - 2 30", sideToMove: "w", opening: null, phase: "endgame", moveNumber: 30, category: "tricky" },
+  { fen: "2r3k1/pp1Qqpp1/1b5p/8/4B3/6P1/PP1R1P1P/6K1 b - - 2 27", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 27, category: "tricky" },
+  { fen: "4r1k1/p4pp1/4rn1p/1p1qN3/2pP1B2/PnP2P2/2Q1R1PP/4R1K1 b - - 3 25", sideToMove: "b", opening: null, phase: "middlegame", moveNumber: 25, category: "tricky" },
+  { fen: "8/8/p6p/P3kpP1/2P5/4K1P1/8/8 b - - 0 36", sideToMove: "b", opening: null, phase: "endgame", moveNumber: 36, category: "tricky" },
+];
