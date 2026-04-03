@@ -32,8 +32,9 @@ export function ScoreReveal({
   const youHadMate = isMateBefore && mateInBefore != null &&
     ((sideToMove === "w" && mateInBefore > 0) || (sideToMove === "b" && mateInBefore < 0));
   const youBlunderedMate = isMateAfterPlayed;
+  const youFoundMate = youHadMate && centipawnLoss === 0;
 
-  const isMateCase = youHadMate || youBlunderedMate;
+  const isMateCase = (youHadMate && !youFoundMate) || youBlunderedMate;
 
   const label = getScoreLabel(centipawnLoss);
   const color = getScoreColor(centipawnLoss);
@@ -43,10 +44,16 @@ export function ScoreReveal({
     ? 0
     : computeMoveAccuracy(evalAfterBest, evalAfterPlayed, sideToMove);
 
+  // Build mate headline with "in N" (omit for mate in 1)
+  const mateN = mateInBefore != null ? Math.abs(mateInBefore) : null;
+  const mateSuffix = mateN != null && mateN > 1 ? ` in ${mateN}` : "";
+
   const headline = youBlunderedMate
     ? "You blundered mate!"
+    : youFoundMate
+    ? `You found mate${mateSuffix}!`
     : youHadMate
-    ? "You missed mate!"
+    ? `You missed mate${mateSuffix}!`
     : label;
 
   return (

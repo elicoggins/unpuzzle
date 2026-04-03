@@ -10,7 +10,7 @@ import { ScoreReveal } from "@/components/score-reveal";
 import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@/lib/chess-engine";
 import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
-import { getRandomPosition } from "@/lib/sample-positions";
+import { getRandomPosition } from "@/lib/positions";
 import { loadDepth } from "@/app/settings/page";
 import type { Position, EvalFeedback } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
@@ -267,7 +267,7 @@ export default function PlayPage() {
         bestMoveSan,
         isMateBefore: evalBefore.isMate,
         mateInBefore: mateInBeforeWhite,
-        isMateAfterPlayed: evalAfter.isMate && !afterGame.isCheckmate(),
+        isMateAfterPlayed: evalAfter.isMate && !afterGame.isCheckmate() && evalAfter.mateIn != null && evalAfter.mateIn > 0,
         mateInAfterPlayed: mateInAfterWhite,
       };
 

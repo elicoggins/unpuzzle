@@ -1,16 +1,29 @@
 #!/usr/bin/env node
 /**
- * Fetches real chess positions from Lichess APIs and prints a TypeScript
- * source file to stdout.
+ * Fetches real chess positions from Lichess APIs and writes per-category
+ * TypeScript source files into src/lib/positions/.
  *
  * Run from the project root:
- *   node scripts/fetch-positions.mjs > src/lib/curated-positions.ts
+ *   node scripts/fetch-positions.mjs
+ *
+ * Output files (DO NOT HAND-EDIT — they will be overwritten):
+ *   src/lib/positions/tactical.ts
+ *   src/lib/positions/balanced.ts
+ *   src/lib/positions/critical.ts
+ *   src/lib/positions/tricky.ts
+ *   src/lib/positions/endgame.ts
  */
 
 import { Chess } from "chess.js";
+import { writeFileSync, mkdirSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 const DELAY_MS = 1400;
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const OUT_DIR = join(__dirname, "..", "src", "lib", "positions");
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,8 +54,8 @@ function phaseFromPosition(fen) {
   const moveNum = moveNumFromFen(fen);
   const mat = materialCount(fen);
   if (moveNum <= 10) return "opening";
-  if (mat <= 26) return "endgame";      // queen gone or heavy piece exchange
-  if (mat <= 46) return "middlegame";   // late middlegame
+  if (mat <= 26) return "endgame";
+  if (mat <= 46) return "middlegame";
   return "middlegame";
 }
 
@@ -67,7 +80,7 @@ function fenFromSanMoves(sanMovesStr) {
   return chess.fen();
 }
 
-// ── 1. Lichess puzzle/next ──────────────────────────────────────────────────
+// ── 1. Lichess puzzle/next (random) ─────────────────────────────────────────
 
 async function fetchOnePuzzle() {
   const res = await safeFetch("https://lichess.org/api/puzzle/next", {
@@ -88,6 +101,37 @@ async function fetchOnePuzzle() {
     phase: phaseFromMoveNum(moveNum),
     moveNumber: moveNum,
     category: themes.includes("endgame") ? "endgame" : "tactical",
+    puzzleRating: data.puzzle?.rating ?? null,
+  };
+}
+
+// ── 1b. Themed tactical puzzles ─────────────────────────────────────────────
+
+const TACTICAL_THEMES = [
+  "mate", "mateIn2", "mateIn3", "fork", "pin", "skewer",
+  "discoveredAttack", "doubleCheck", "hangingPiece", "attraction",
+  "clearance", "backRankMate", "smotheredMate", "arabianMate",
+];
+
+async function fetchThemedPuzzle(theme, category) {
+  const res = await safeFetch(
+    `https://lichess.org/api/puzzle/next?angle=${theme}`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!res) return null;
+  const data = await res.json();
+  const pgn = data.game?.pgn;
+  if (!pgn) return null;
+  const fen = fenFromSanMoves(pgn);
+  const moveNum = moveNumFromFen(fen);
+  return {
+    fen,
+    sideToMove: sideFromFen(fen),
+    opening: null,
+    phase: phaseFromMoveNum(moveNum),
+    moveNumber: moveNum,
+    category,
+    puzzleRating: data.puzzle?.rating ?? null,
   };
 }
 
@@ -105,7 +149,7 @@ async function fetchUserGames(username, max = 15, perfType = "blitz,rapid,classi
   process.stderr.write(`  Fetching games for ${username}…\n`);
   const res = await safeFetch(
     `https://lichess.org/api/games/user/${username}?${params}`,
-    { headers: { Accept: "application/x-ndjson" } }
+    { headers: { Accept: "application/x-ndjson" } },
   );
   if (!res) return [];
   const text = await res.text();
@@ -129,48 +173,20 @@ function extractPositionFromGame(game, targetPly) {
     opening: game.opening?.name ?? null,
     phase: phaseFromPosition(fen),
     moveNumber: moveNum,
+    puzzleRating: null,
   };
 }
 
 // ── 3. Tricky positions — fetched from Lichess puzzle themes ────────────────
-// Themes chosen because they surface positions where the "obvious" move is
-// wrong or counterintuitive: sacrifices, equality fights, trapping ideas.
 const TRICKY_THEMES = [
-  "equality",       // find the move that merely holds, not a flashy win
-  "advantage",      // small edge — positional, not tactical
-  "sacrifice",      // a real sacrifice is required (or tempting but wrong)
-  "trapping",       // trapping an enemy piece
-  "deflection",     // deflect a key defender
-  "decoy",          // lure the king/piece to a bad square
-  "interference",   // interference tactic
-  "zugzwang",       // being forced to move is the problem
+  "equality", "advantage", "sacrifice", "trapping",
+  "deflection", "decoy", "interference", "zugzwang",
+  "quietMove", "defensiveMove", "underPromotion",
+  "enPassant", "xRayAttack", "intermezzo",
 ];
 
-async function fetchPuzzleByTheme(theme) {
-  const res = await safeFetch(
-    `https://lichess.org/api/puzzle/next?angle=${theme}`,
-    { headers: { Accept: "application/json" } }
-  );
-  if (!res) return null;
-  const data = await res.json();
-  const pgn = data.game?.pgn;
-  if (!pgn) return null;
-  const fen = fenFromSanMoves(pgn);
-  const moveNum = moveNumFromFen(fen);
-  return {
-    fen,
-    sideToMove: sideFromFen(fen),
-    opening: null,
-    phase: phaseFromMoveNum(moveNum),
-    moveNumber: moveNum,
-    category: "tricky",
-  };
-}
-
 // ── player lists ────────────────────────────────────────────────────────────
-// Verified titled players (GMs/IMs) active on Lichess
 
-// Primarily for middlegame sampling — online GMs with lots of rapid/blitz
 const GM_MIDDLEGAME = [
   "nihalsarin", "DanielNaroditsky", "penguingim1", "AnishGiri", "FabianoCaruana",
   "alireza2003", "DrNykterstein", "vincentkeymer", "BogdanDeac", "RaunakSadhwani",
@@ -178,13 +194,12 @@ const GM_MIDDLEGAME = [
   "Zhigalko_Sergei", "MateusCFernandes",
 ];
 
-// Primarily for endgame sampling — classical/rapid games that consistently
-// reach technical endgames
 const GM_ENDGAME = [
   "DanielNaroditsky", "AnishGiri", "alireza2003", "DrNykterstein",
   "lovlas", "GMHikaru", "Nodirbek", "Zhigalko_Sergei",
   "nihalsarin", "penguingim1", "BogdanDeac", "RaunakSadhwani",
   "LyonBeast", "MateusCFernandes", "RebeccaHarris",
+  "JGBT", "vincentkeymer", "FabianoCaruana",
 ];
 
 // ── main ────────────────────────────────────────────────────────────────────
@@ -194,24 +209,36 @@ async function main() {
   const seen = new Set();
 
   function add(items) {
+    let added = 0;
     for (const p of (Array.isArray(items) ? items : [items])) {
       if (!p?.fen || seen.has(p.fen)) continue;
       try { new Chess(p.fen); } catch { continue; }
       seen.add(p.fen);
       allPositions.push(p);
+      added++;
     }
+    return added;
   }
 
-  // ── Tactical puzzles ──────────────────────────────────────────────────
-  process.stderr.write("Fetching tactical puzzles…\n");
-  for (let i = 0; i < 60; i++) {
+  // ── Tactical puzzles (random) ─────────────────────────────────────────
+  process.stderr.write("Fetching tactical puzzles (random)…\n");
+  for (let i = 0; i < 100; i++) {
     add(await fetchOnePuzzle());
     await delay(DELAY_MS);
   }
-  process.stderr.write(`After puzzles: ${allPositions.length}\n`);
+  process.stderr.write(`After random puzzles: ${allPositions.length}\n`);
 
-  // ── Middlegame positions from master games ────────────────────────────────
-  // Sample at plies 25, 33, 41 — broad middlegame window
+  // ── Tactical puzzles (themed — high-yield tactical themes) ────────────
+  process.stderr.write("Fetching tactical puzzles (themed)…\n");
+  for (let round = 0; round < 8; round++) {
+    for (const theme of TACTICAL_THEMES) {
+      add(await fetchThemedPuzzle(theme, "tactical"));
+      await delay(DELAY_MS);
+    }
+  }
+  process.stderr.write(`After themed tactical: ${allPositions.length}\n`);
+
+  // ── Middlegame positions from master games ────────────────────────────
   process.stderr.write("Fetching GM middlegame positions…\n");
   for (const player of GM_MIDDLEGAME) {
     const games = await fetchUserGames(player, 18, "blitz,rapid,classical");
@@ -229,16 +256,15 @@ async function main() {
   }
   process.stderr.write(`After GM middlegames: ${allPositions.length}\n`);
 
-  // ── Late middlegame / critical positions ──────────────────────────────────
-  // Sample at plies 38-50 — positions where games are decided
+  // ── Late middlegame / critical positions ──────────────────────────────
   process.stderr.write("Fetching critical/sharp middlegame positions…\n");
-  for (const player of GM_MIDDLEGAME.slice(0, 10)) {
-    const games = await fetchUserGames(player, 15, "rapid,classical");
+  for (const player of GM_MIDDLEGAME) {
+    const games = await fetchUserGames(player, 18, "rapid,classical");
     await delay(DELAY_MS);
-    for (const game of games.slice(0, 12)) {
+    for (const game of games.slice(0, 18)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
-      if (moves.length < 44) continue;
-      for (const ply of [39, 47]) {
+      if (moves.length < 40) continue;
+      for (const ply of [35, 39, 43, 47]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
         if (pos) add({ ...pos, category: "critical" });
@@ -247,94 +273,69 @@ async function main() {
   }
   process.stderr.write(`After critical: ${allPositions.length}\n`);
 
-  // ── Endgame positions from classical/rapid master games ───────────────────
-  // Use high ply samples (55-85) and filter by material-based phase detection
+  // ── Endgame positions from classical/rapid master games ───────────────
   process.stderr.write("Fetching GM endgame positions…\n");
   for (const player of GM_ENDGAME) {
-    const games = await fetchUserGames(player, 18, "classical,rapid");
+    const games = await fetchUserGames(player, 20, "classical,rapid");
     await delay(DELAY_MS);
-    for (const game of games.slice(0, 15)) {
+    for (const game of games.slice(0, 18)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
-      if (moves.length < 56) continue;
-      for (const ply of [55, 63, 71, 81]) {
+      if (moves.length < 52) continue;
+      for (const ply of [51, 55, 63, 71, 81, 91]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
-        // Use material-based check: only include true endgames
-        if (pos && materialCount(pos.fen) <= 34) add({ ...pos, category: "endgame" });
+        if (pos && materialCount(pos.fen) <= 38) add({ ...pos, category: "endgame" });
       }
     }
     process.stderr.write(`  ${player} → ${allPositions.length} total\n`);
   }
   process.stderr.write(`After endgames: ${allPositions.length}\n`);
 
-  // ── Tricky positions from Lichess puzzle themes ──────────────────────────
+  // ── Tricky positions from Lichess puzzle themes ──────────────────────
   process.stderr.write("Fetching tricky/thematic puzzles…\n");
-  for (let round = 0; round < 4; round++) {
+  for (let round = 0; round < 8; round++) {
     for (const theme of TRICKY_THEMES) {
-      add(await fetchPuzzleByTheme(theme));
+      add(await fetchThemedPuzzle(theme, "tricky"));
       await delay(DELAY_MS);
     }
   }
   process.stderr.write(`After tricky: ${allPositions.length}\n`);
 
-  process.stderr.write(`\nTotal unique positions: ${allPositions.length}\n`);
-  process.stderr.write(`  tactical: ${allPositions.filter(p => p.category === "tactical").length}\n`);
-  process.stderr.write(`  balanced: ${allPositions.filter(p => p.category === "balanced").length}\n`);
-  process.stderr.write(`  critical: ${allPositions.filter(p => p.category === "critical").length}\n`);
-  process.stderr.write(`  endgame:  ${allPositions.filter(p => p.category === "endgame").length}\n`);
-  process.stderr.write(`  tricky:   ${allPositions.filter(p => p.category === "tricky").length}\n`);
-
-  // ── Emit TypeScript ────────────────────────────────────────────────────────
-
-  const lines = [
-    `import type { Position, PositionCategory } from "./types";`,
-    ``,
-    `// Curated positions sourced entirely from real Lichess games and puzzles.`,
-    `// All FENs are guaranteed to appear in Lichess databases for cloud eval coverage.`,
-    `//`,
-    `// Categories:`,
-    `//   tactical  — clear winning move / combination`,
-    `//   balanced  — roughly equal middlegame; find a good positional move`,
-    `//   critical  — late middlegame, few good moves, many losing`,
-    `//   tricky    — looks like a tactic but isn't, or vice versa`,
-    `//   endgame   — technical endgame from master games`,
-    ``,
-    `// DO NOT EDIT BY HAND — regenerate with: node scripts/fetch-positions.mjs > src/lib/curated-positions.ts`,
-    ``,
-    `export type { PositionCategory };`,
-    ``,
-    `export interface CuratedPosition extends Omit<Position, "id"> {`,
-    `  category: PositionCategory;`,
-    `}`,
-    ``,
-    `export const CURATED_POSITIONS: CuratedPosition[] = [`,
-  ];
-
+  // ── Summary ───────────────────────────────────────────────────────────
+  const cats = { tactical: [], balanced: [], critical: [], tricky: [], endgame: [] };
   for (const p of allPositions) {
-    lines.push(`  { fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}" },`);
+    (cats[p.category] ?? []).push(p);
   }
 
-  lines.push(`];`);
-  lines.push(``);
-  lines.push(`const WEIGHTS: Record<PositionCategory, number> = {`);
-  lines.push(`  tactical: 0.10, balanced: 0.30, critical: 0.25, tricky: 0.10, endgame: 0.25,`);
-  lines.push(`};`);
-  lines.push(``);
-  lines.push(`export function getWeightedRandomPosition(): CuratedPosition & { id: string } {`);
-  lines.push(`  const roll = Math.random();`);
-  lines.push(`  let cum = 0;`);
-  lines.push(`  let cat: PositionCategory = "balanced";`);
-  lines.push(`  for (const [c, w] of Object.entries(WEIGHTS) as [PositionCategory, number][]) {`);
-  lines.push(`    cum += w; if (roll < cum) { cat = c; break; }`);
-  lines.push(`  }`);
-  lines.push(`  const pool = CURATED_POSITIONS.filter((p) => p.category === cat);`);
-  lines.push(`  const src = pool.length > 0 ? pool : CURATED_POSITIONS;`);
-  lines.push(`  const i = Math.floor(Math.random() * src.length);`);
-  lines.push(`  return { ...src[i], id: \`curated-\${CURATED_POSITIONS.indexOf(src[i])}\` };`);
-  lines.push(`}`);
-  lines.push(``);
+  process.stderr.write(`\nTotal unique positions: ${allPositions.length}\n`);
+  for (const [cat, positions] of Object.entries(cats)) {
+    process.stderr.write(`  ${cat}: ${positions.length}\n`);
+  }
 
-  console.log(lines.join("\n"));
+  // ── Write per-category TypeScript files ────────────────────────────────
+  mkdirSync(OUT_DIR, { recursive: true });
+
+  for (const [cat, positions] of Object.entries(cats)) {
+    const constName = `${cat.toUpperCase()}_POSITIONS`;
+    const lines = [
+      `import type { CuratedPosition } from "./index";`,
+      ``,
+      `// DO NOT EDIT BY HAND — regenerate with: node scripts/fetch-positions.mjs`,
+      ``,
+      `export const ${constName}: CuratedPosition[] = [`,
+    ];
+    for (const p of positions) {
+      lines.push(`  { fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}", puzzleRating: ${p.puzzleRating ?? null} },`);
+    }
+    lines.push(`];`);
+    lines.push(``);
+
+    const outPath = join(OUT_DIR, `${cat}.ts`);
+    writeFileSync(outPath, lines.join("\n"));
+    process.stderr.write(`Wrote ${outPath} (${positions.length} positions)\n`);
+  }
+
+  process.stderr.write("\nDone! Per-category files written to src/lib/positions/\n");
 }
 
 main().catch((e) => {
