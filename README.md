@@ -28,3 +28,7 @@ pnpm dev
 - **TypeScript** + **Tailwind CSS v4**
 - **Stockfish 18** lite WASM — runs entirely in the browser, no server needed
 - **chess.js** · **react-chessboard v5** · **framer-motion**
+
+## Deployment
+
+Hosted on GitHub Pages at **https://elicoggins.github.io/unpuzzle/**. Deploys automatically on every push to `main` via GitHub Actions.

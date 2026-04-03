@@ -6,6 +6,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
+> **DEPLOYMENT CONSTRAINT — READ BEFORE MAKING ANY ARCHITECTURE DECISIONS**
+>
+> This app is hosted on **GitHub Pages** (static file hosting only). There is no server, no Node.js runtime, no serverless functions. Every architectural decision must be compatible with a fully static export (`output: "export"` in `next.config.ts`).
+>
+> This means:
+> - **No API routes** — `src/app/api/` must not exist
+> - **No server components that fetch at request time** — all data must be static or client-side
+> - **No `getServerSideProps`, `Server Actions`, or any server-runtime features**
+> - **All external resources** (fonts, engines, etc.) must either be bundled in `public/` or fetched client-side from a CORS-enabled CDN
+> - **Base path is `/unpuzzle`** in production — use `process.env.NEXT_PUBLIC_BASE_PATH ?? ""` for any hardcoded public asset paths
+
+---
+
 # Unpuzzle — App Overview
 
 ## What It Is
@@ -19,6 +32,7 @@ Study the position, determine what you think is a good move. Stockfish evaluates
 ## Tech Stack
 
 - **Framework**: Next.js (App Router, static export via `output: "export"`)
+- **Hosting**: GitHub Pages at `https://elicoggins.github.io/unpuzzle/` — deployed via GitHub Actions on push to `main`
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4, CSS variables for theming
 - **Chess logic**: `chess.js` for move generation/validation
