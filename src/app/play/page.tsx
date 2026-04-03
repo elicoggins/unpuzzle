@@ -46,6 +46,8 @@ export default function PlayPage() {
   const [pendingMove, setPendingMove] = useState<{ uci: string; san: string } | null>(null);
   const [legalMoveSquares, setLegalMoveSquares] = useState<string[]>([]);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const selectedSquareRef = useRef<string | null>(null);
+  const wasAlreadySelectedRef = useRef(false);
   const gameRef = useRef<Chess>(new Chess());
   const startTimeRef = useRef<number>(0);
   const resizingRef = useRef(false);
@@ -92,6 +94,7 @@ export default function PlayPage() {
     setPendingMove(null);
     setLegalMoveSquares([]);
     setSelectedSquare(null);
+    selectedSquareRef.current = null;
     setTimerKey((k) => k + 1);
 
     const data = getRandomPosition();
@@ -258,6 +261,17 @@ export default function PlayPage() {
     ({ sourceSquare, targetSquare, piece }: PieceDropHandlerArgs): boolean => {
       if (gameState !== "playing") return false;
 
+      // Dropped on same square — deselect if it was already selected before this drag
+      if (sourceSquare === targetSquare || !targetSquare) {
+        if (wasAlreadySelectedRef.current) {
+          setLegalMoveSquares([]);
+          setSelectedSquare(null);
+          selectedSquareRef.current = null;
+        }
+        wasAlreadySelectedRef.current = false;
+        return false;
+      }
+
       const game = gameRef.current;
 
       try {
@@ -273,6 +287,7 @@ export default function PlayPage() {
         setMoveHistory((prev) => [...prev, moveResult.san]);
         setLegalMoveSquares([]);
         setSelectedSquare(null);
+        selectedSquareRef.current = null;
 
         const uciMove =
           sourceSquare + (targetSquare || "") + (moveResult.promotion || "");
@@ -302,6 +317,7 @@ export default function PlayPage() {
     setPendingMove(null);
     setLegalMoveSquares([]);
     setSelectedSquare(null);
+    selectedSquareRef.current = null;
     setGameState("playing");
   }, [position]);
 
@@ -381,16 +397,23 @@ export default function PlayPage() {
       if (gameState !== "playing") {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
+        selectedSquareRef.current = null;
+        wasAlreadySelectedRef.current = false;
         return;
       }
+      // Track if this piece was already selected before this mousedown
+      wasAlreadySelectedRef.current = selectedSquareRef.current === square;
       const game = gameRef.current;
       const moves = game.moves({ square: square as any, verbose: true });
       if (moves.length > 0 && piece) {
         setLegalMoveSquares(moves.map((m) => m.to));
         setSelectedSquare(square);
+        selectedSquareRef.current = square;
       } else {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
+        selectedSquareRef.current = null;
+        wasAlreadySelectedRef.current = false;
       }
     },
     [gameState]
@@ -404,6 +427,7 @@ export default function PlayPage() {
       if (moves.length === 0) {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
+        selectedSquareRef.current = null;
       }
     },
     [gameState]
