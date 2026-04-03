@@ -20,6 +20,14 @@ type GameState = "loading" | "playing" | "confirming" | "evaluating" | "scored";
 function computeMaxBoardSize(): number {
   if (typeof window === "undefined") return 400;
   const navHeight = 57;
+  const isMobile = window.innerWidth < 768;
+  if (isMobile) {
+    // eval bar 28 + gap 4 + padding 32
+    const maxWidth = window.innerWidth - 64;
+    // Reserve space for nav, mobile info bar, padding, and bottom panel
+    const maxHeight = window.innerHeight - navHeight - 260;
+    return Math.max(200, Math.min(maxHeight, maxWidth));
+  }
   const padding = 72;
   const maxHeight = window.innerHeight - navHeight - padding;
   // Left panel 220 + right panel 240 + eval bar 28 + gaps (4 * 16)
@@ -79,10 +87,16 @@ export default function PlayPage() {
   useEffect(() => {
     setBoardSize(computeMaxBoardSize());
     function handleResize() {
-      setBoardSize((prev) => {
-        const max = computeMaxBoardSize();
-        return prev > max ? max : prev;
-      });
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        // On mobile, always fill available space
+        setBoardSize(computeMaxBoardSize());
+      } else {
+        setBoardSize((prev) => {
+          const max = computeMaxBoardSize();
+          return prev > max ? max : prev;
+        });
+      }
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -557,10 +571,27 @@ export default function PlayPage() {
   );
 
   return (
-    <div className="flex-1 flex items-start justify-center p-4 pt-4 gap-4">
+    <div className="flex-1 flex flex-col md:flex-row items-center md:items-start justify-start md:justify-center p-4 pt-2 md:pt-4 gap-4">
+      {/* ── Mobile Info Bar ── */}
+      <div className="flex md:hidden items-center justify-between w-full max-w-[calc(100vw-2rem)]">
+        <div className="flex items-center gap-2 text-sm">
+          <span
+            className={`inline-block w-3 h-3 rounded-full border ${
+              position?.sideToMove === "w"
+                ? "bg-white border-gray-400"
+                : "bg-gray-800 border-gray-500"
+            }`}
+          />
+          <span className="text-text-secondary">
+            {position?.sideToMove === "w" ? "White" : "Black"} to move
+          </span>
+        </div>
+        <Timer key={timerKey} isRunning={timerRunning} />
+      </div>
+
       {/* ── Left Panel ── */}
       <div
-        className="flex flex-col gap-3"
+        className="hidden md:flex flex-col gap-3"
         style={{ width: 220 }}
       >
         {/* Puzzle info */}
@@ -691,7 +722,7 @@ export default function PlayPage() {
           {/* Resize handle */}
           <div
             onMouseDown={handleResizeStart}
-            className="absolute -bottom-1 -right-1 w-4 h-4 cursor-nwse-resize z-10 group"
+            className="absolute -bottom-1 -right-1 w-4 h-4 cursor-nwse-resize z-10 group hidden md:block"
             title="Drag to resize"
           >
             <svg
@@ -707,11 +738,10 @@ export default function PlayPage() {
 
       {/* ── Right Panel ── */}
       <div
-        className="flex flex-col gap-3"
-        style={{ width: 280 }}
+        className="flex flex-col gap-3 w-full md:w-[280px]"
       >
         {/* Move history */}
-        <div className="border border-border rounded-lg flex flex-col overflow-hidden" style={{ height: 200 }}>
+        <div className="hidden md:flex border border-border rounded-lg flex-col overflow-hidden" style={{ height: 200 }}>
           <div className="px-4 py-2 border-b border-border bg-bg-secondary">
             <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
               moves
@@ -839,7 +869,7 @@ export default function PlayPage() {
         </div>
 
         {/* Engine lines (always visible) */}
-        <div>
+        <div className="order-2 md:order-1">
           {(gameState === "evaluating" || gameState === "scored") && engineLines.length > 0 && position ? (
             <EngineLines
               fen={position.fen}
@@ -869,7 +899,7 @@ export default function PlayPage() {
         </div>
 
         {/* Feedback panel */}
-        <div className="border border-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[180px]">
+        <div className="order-1 md:order-2 border border-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[180px]">
           {gameState === "playing" && (
             <div className="text-center space-y-2">
               <div className="text-sm font-medium text-text-secondary">
