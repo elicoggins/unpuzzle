@@ -9,17 +9,9 @@ export default function Home() {
         </h1>
 
         <p className="text-xl text-text-secondary leading-relaxed">
-          Most puzzle sites aren&apos;t realistic. They serve up positions where there&apos;s
-          one clear winning move and everything else loses. You know you&apos;re looking
-          for a tactic, so you calculate sacrifices you&apos;d never find in a real game.
+          real chess
         </p>
 
-        <p className="text-lg text-text-muted leading-relaxed">
-          <span className="text-text-primary font-semibold">unpuzzle</span> reverses
-          this. Real positions. Sometimes there&apos;s a brilliant move. Sometimes
-          there are five good ones. You just play what looks right — and get scored
-          on how close you were to the engine&apos;s best.
-        </p>
 
         <div className="flex flex-col items-center gap-4 pt-4">
           <Link

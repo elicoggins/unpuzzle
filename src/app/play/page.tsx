@@ -14,6 +14,17 @@ import type { PieceDropHandlerArgs, Arrow } from "react-chessboard";
 
 type GameState = "loading" | "playing" | "evaluating" | "scored";
 
+function computeMaxBoardSize(): number {
+  if (typeof window === "undefined") return 400;
+  const navHeight = 57;
+  const padding = 32;
+  const maxHeight = window.innerHeight - navHeight - padding;
+  // Left panel 220 + right panel 240 + eval bar 28 + gaps (4 * 16)
+  const horizontalChrome = 220 + 240 + 28 + 64;
+  const maxWidth = window.innerWidth - horizontalChrome;
+  return Math.max(280, Math.min(maxHeight, maxWidth));
+}
+
 export default function PlayPage() {
   const [position, setPosition] = useState<Position | null>(null);
   const [gameState, setGameState] = useState<GameState>("loading");
@@ -39,6 +50,19 @@ export default function PlayPage() {
   useEffect(() => {
     const engine = getEngine();
     engine.init().then(() => setEngineReady(true));
+  }, []);
+
+  // Set initial board size on mount and recalculate on window resize
+  useEffect(() => {
+    setBoardSize(computeMaxBoardSize());
+    function handleResize() {
+      setBoardSize((prev) => {
+        const max = computeMaxBoardSize();
+        return prev > max ? max : prev;
+      });
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const loadPosition = useCallback(async () => {
@@ -89,7 +113,8 @@ export default function PlayPage() {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
         const delta = Math.max(dx, dy);
-        const newSize = Math.max(280, Math.min(600, startSize + delta));
+        const max = computeMaxBoardSize();
+        const newSize = Math.max(280, Math.min(max, startSize + delta));
         setBoardSize(newSize);
       };
 

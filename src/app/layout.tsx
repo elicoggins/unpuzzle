@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
+import { AccentProvider } from "@/components/accent-provider";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-heading",
@@ -29,6 +30,7 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg-primary text-text-primary font-[family-name:var(--font-heading)]">
+        <AccentProvider />
         <Nav />
         <main className="flex-1 flex flex-col">{children}</main>
       </body>
