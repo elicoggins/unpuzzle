@@ -9,7 +9,7 @@ export default function Home() {
         </h1>
 
         <p className="text-xl text-text-secondary leading-relaxed">
-          real positions
+          real chess positions, not just puzzles
         </p>
 
 

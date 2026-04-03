@@ -149,7 +149,7 @@ export default function SettingsPage() {
   const currentAccent = resolveAccent(choice).accent;
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-6">
+    <div className="flex-1 flex flex-col items-center justify-start px-6 py-6">
       <div className="max-w-4xl w-full space-y-4">
         <h1 className="text-3xl font-bold tracking-tight">settings</h1>
 

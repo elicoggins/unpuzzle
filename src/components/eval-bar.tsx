@@ -9,6 +9,8 @@ interface EvalBarProps {
   height: number;
   /** Which side is at the bottom of the board */
   orientation: "white" | "black";
+  /** When false, show 50/50 with a dash instead of the real eval */
+  revealed?: boolean;
 }
 
 function evalToWhiteFraction(cp: number, isMate: boolean, mateIn: number | null): number {
@@ -28,18 +30,18 @@ function formatEvalLabel(cp: number, isMate: boolean, mateIn: number | null): st
   return abs >= 10 ? abs.toFixed(0) : abs.toFixed(1);
 }
 
-export function EvalBar({ eval: cp, isMate, mateIn, height, orientation }: EvalBarProps) {
-  const whiteFraction = evalToWhiteFraction(cp, isMate, mateIn);
+export function EvalBar({ eval: cp, isMate, mateIn, height, orientation, revealed = true }: EvalBarProps) {
+  const whiteFraction = revealed ? evalToWhiteFraction(cp, isMate, mateIn) : 0.5;
   // If board is flipped (black on bottom), we invert the bar so black's advantage fills from the bottom
   const fillFromBottom = orientation === "white" ? whiteFraction : 1 - whiteFraction;
   const whitePercent = fillFromBottom * 100;
 
-  const isWhiteAdvantage = isMate ? (mateIn != null && mateIn > 0) : cp > 0;
-  const isBlackAdvantage = isMate ? (mateIn != null && mateIn < 0) : cp < 0;
-  const isEven = !isMate && cp === 0;
+  const isWhiteAdvantage = revealed && (isMate ? (mateIn != null && mateIn > 0) : cp > 0);
+  const isBlackAdvantage = revealed && (isMate ? (mateIn != null && mateIn < 0) : cp < 0);
+  const isEven = !revealed || (!isMate && cp === 0);
 
   // Show label on the advantaged side
-  const label = formatEvalLabel(cp, isMate, mateIn);
+  const label = revealed ? formatEvalLabel(cp, isMate, mateIn) : "–";
 
   // Determine which side the label goes on (top = black zone, bottom = white zone)
   // In default orientation (white at bottom): bottom is white, top is black

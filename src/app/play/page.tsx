@@ -8,6 +8,7 @@ import { EngineLines } from "@/components/engine-lines";
 import { Timer } from "@/components/timer";
 import { ScoreReveal } from "@/components/score-reveal";
 import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@/lib/chess-engine";
+import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
 import { getRandomPosition } from "@/lib/sample-positions";
 import type { Position, EvalFeedback } from "@/lib/types";
@@ -161,12 +162,11 @@ export default function PlayPage() {
       setEngineLines([]);
       setLastPlayedUci(uciMove);
 
-      const engine = getEngine();
       const originalFen = position.fen;
       const sideToMove = position.sideToMove;
 
       // 1. Evaluate the original position with MultiPV for engine lines display
-      const evalBefore: EvalResult = await engine.evaluate(originalFen, 16, (update) => {
+      const evalBefore: EvalResult = await evaluateWithFallback(originalFen, 20, (update) => {
         setEngineDepth(update);
         // Update eval bar with live eval (convert from side-to-move to white's perspective)
         const whiteEval = sideToMove === "w" ? update.eval : -update.eval;
@@ -205,7 +205,7 @@ export default function PlayPage() {
 
       // 4. Evaluate the position after the user's move (single PV, no live updates needed)
       setEngineDepth(null);
-      const evalAfter: EvalResult = await engine.evaluate(afterFen, 16, (update) => {
+      const evalAfter: EvalResult = await evaluateWithFallback(afterFen, 20, (update) => {
         setEngineDepth(update);
       });
 
@@ -219,9 +219,9 @@ export default function PlayPage() {
           promotion: evalBefore.bestMove.length > 4 ? evalBefore.bestMove[4] : undefined,
         });
         const bestFen = bestGame.fen();
-        const evalAfterBest = await engine.evaluate(bestFen, 16);
+        const evalAfterBestResult = await evaluateWithFallback(bestFen, 20);
         // Negate because perspective flips after a move
-        evalAfterBestCp = -evalAfterBest.eval;
+        evalAfterBestCp = -evalAfterBestResult.eval;
       }
 
       // 6. Compute centipawn loss
@@ -232,15 +232,19 @@ export default function PlayPage() {
       const postMoveWhiteEval = sideToMove === "w" ? evalAfterFromOrigPerspective : -evalAfterFromOrigPerspective;
       setEvalForBar({ eval: postMoveWhiteEval, isMate: evalAfter.isMate, mateIn: evalAfter.mateIn != null ? -evalAfter.mateIn : null });
 
+      // Convert to white's perspective for display (+ = white winning, − = black winning)
+      const toWhite = (cp: number) => sideToMove === "w" ? cp : -cp;
+      const mateInBeforeWhite = evalBefore.mateIn != null && sideToMove === "b" ? -evalBefore.mateIn : evalBefore.mateIn;
+
       const result: EvalFeedback = {
         centipawnLoss,
-        evalBefore: evalBefore.eval,
-        evalAfterPlayed: evalAfterFromOrigPerspective,
-        evalAfterBest: evalAfterBestCp,
+        evalBefore: toWhite(evalBefore.eval),
+        evalAfterPlayed: toWhite(evalAfterFromOrigPerspective),
+        evalAfterBest: toWhite(evalAfterBestCp),
         bestMoveUci: evalBefore.bestMove,
         bestMoveSan,
         isMateBefore: evalBefore.isMate,
-        mateInBefore: evalBefore.mateIn,
+        mateInBefore: mateInBeforeWhite,
       };
 
       setFeedback(result);
@@ -574,6 +578,7 @@ export default function PlayPage() {
           mateIn={evalForBar.mateIn}
           height={boardSize}
           orientation={boardOrientation}
+          revealed={gameState === "scored"}
         />
         <div
           className="relative flex-shrink-0"
@@ -836,7 +841,7 @@ export default function PlayPage() {
                   <div className="w-full bg-border/30 rounded-full h-1 overflow-hidden">
                     <div
                       className="h-full bg-accent/60 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (engineDepth.depth / 16) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (engineDepth.depth / 20) * 100)}%` }}
                     />
                   </div>
                 </div>

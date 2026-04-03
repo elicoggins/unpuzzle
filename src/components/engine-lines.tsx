@@ -48,12 +48,14 @@ function uciToSan(fen: string, uciMoves: string[]): string[] {
 
 export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: EngineLinesProps) {
   const displayLines = useMemo(() => {
+    const stm = fen.split(" ")[1] ?? "w";
     return lines.map((line) => {
       const sanMoves = uciToSan(fen, line.pv);
-      return {
-        ...line,
-        sanMoves,
-      };
+      // Convert to white's perspective (standard convention: + = white winning, − = black winning)
+      const displayEval = stm === "b" ? -line.eval : line.eval;
+      const displayMateIn =
+        line.isMate && line.mateIn != null && stm === "b" ? -line.mateIn : line.mateIn;
+      return { ...line, sanMoves, displayEval, displayMateIn };
     });
   }, [fen, lines]);
 
@@ -65,9 +67,9 @@ export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: Eng
         <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
           engine
         </span>
-        <span className="text-[10px] font-[family-name:var(--font-mono)] text-text-muted">
+        <span className="text-[10px] font-[family-name:var(--font-mono)] text-text-muted flex items-center gap-1.5">
           {isSearching && (
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent/60 animate-pulse mr-1.5" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent/60 animate-pulse" />
           )}
           d{depth}
         </span>
@@ -75,22 +77,18 @@ export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: Eng
       <div className="divide-y divide-border/50">
         {displayLines.map((line, i) => {
           const evalColor =
-            line.isMate && line.mateIn != null
-              ? line.mateIn > 0
-                ? "text-white bg-white/10"
-                : "text-text-muted bg-black/20"
-              : line.eval > 50
-                ? "text-white bg-white/10"
-                : line.eval < -50
-                  ? "text-text-muted bg-black/20"
-                  : "text-text-secondary bg-white/5";
+            line.displayEval > 0
+              ? "text-white bg-white/10"
+              : line.displayEval < 0
+                ? "text-text-muted bg-black/20"
+                : "text-text-secondary bg-white/5";
 
           return (
             <div key={i} className="flex items-start gap-2 px-3 py-1.5">
               <span
                 className={`text-[11px] font-bold font-[family-name:var(--font-mono)] min-w-[44px] text-center rounded px-1 py-0.5 ${evalColor}`}
               >
-                {formatEval(line.eval, line.isMate, line.mateIn)}
+                {formatEval(line.displayEval, line.isMate, line.displayMateIn)}
               </span>
               <span className="text-xs font-[family-name:var(--font-mono)] text-text-secondary flex gap-x-1.5 overflow-hidden min-w-0">
                 {line.sanMoves.length > 0

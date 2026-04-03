@@ -27,6 +27,8 @@ export interface EvalResult {
   pv: string[];
   /** All MultiPV lines at final depth */
   lines: EngineLine[];
+  /** Where this result came from */
+  source: "lichess" | "local";
 }
 
 export interface DepthUpdate {
@@ -174,6 +176,7 @@ class StockfishEngine {
           depth: this.currentDepth,
           pv: this.currentPv,
           lines,
+          source: "local",
         });
         this.pendingResolve = null;
         this.onDepthUpdate = null;
@@ -183,7 +186,7 @@ class StockfishEngine {
 
   async evaluate(
     fen: string,
-    depth: number = 16,
+    depth: number = 20,
     onDepth?: DepthCallback,
     multiPv: number = 1
   ): Promise<EvalResult> {
@@ -204,7 +207,6 @@ class StockfishEngine {
 
     return new Promise((resolve) => {
       this.pendingResolve = resolve;
-      this.worker!.postMessage("ucinewgame");
       if (multiPv > 1) {
         this.worker!.postMessage(`setoption name MultiPV value ${multiPv}`);
       } else {
