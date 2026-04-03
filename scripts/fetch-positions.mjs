@@ -173,7 +173,6 @@ function extractPositionFromGame(game, targetPly) {
     opening: game.opening?.name ?? null,
     phase: phaseFromPosition(fen),
     moveNumber: moveNum,
-    puzzleRating: null,
   };
 }
 
@@ -325,7 +324,8 @@ async function main() {
       `export const ${constName}: CuratedPosition[] = [`,
     ];
     for (const p of positions) {
-      lines.push(`  { fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}", puzzleRating: ${p.puzzleRating ?? null} },`);
+      const ratingPart = p.puzzleRating != null ? `, puzzleRating: ${p.puzzleRating}` : "";
+      lines.push(`  { fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}"${ratingPart} },`);
     }
     lines.push(`];`);
     lines.push(``);
