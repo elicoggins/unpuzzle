@@ -12,10 +12,10 @@ const PRESETS = [
 ];
 
 const FONT_OPTIONS = [
-  { name: "Orbitron", cssVar: "--font-orbitron", scale: 1 },
-  { name: "Space Grotesk", cssVar: "--font-space-grotesk", scale: 1.05 },
-  { name: "Audiowide", cssVar: "--font-audiowide", scale: 1 },
-  { name: "Press Start 2P", cssVar: "--font-press-start", scale: 0.7 },
+  { name: "Orbitron", cssVar: "--font-orbitron" },
+  { name: "Space Grotesk", cssVar: "--font-space-grotesk" },
+  { name: "Audiowide", cssVar: "--font-audiowide" },
+  { name: "Press Start 2P", cssVar: "--font-press-start" },
 ];
 
 function hexToHsl(hex: string): [number, number, number] {
@@ -139,12 +139,10 @@ export default function SettingsPage() {
   }
 
   function selectFont(cssVar: string) {
-    const font = FONT_OPTIONS.find((f) => f.cssVar === cssVar);
-    const scale = font?.scale ?? 1;
     setSelectedFont(cssVar);
-    localStorage.setItem(FONT_KEY, JSON.stringify({ cssVar, scale }));
+    localStorage.setItem(FONT_KEY, JSON.stringify({ cssVar }));
     window.dispatchEvent(
-      new CustomEvent("font-change", { detail: { fontVar: cssVar, scale } })
+      new CustomEvent("font-change", { detail: { fontVar: cssVar } })
     );
   }
 
