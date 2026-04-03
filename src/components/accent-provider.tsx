@@ -10,8 +10,9 @@ function applyAccent(accent: string, accentHover: string) {
   document.documentElement.style.setProperty("--color-accent-hover", accentHover);
 }
 
-function applyFont(fontVar: string) {
+function applyFont(fontVar: string, scale: number) {
   document.documentElement.style.setProperty("--font-heading", `var(${fontVar})`);
+  document.documentElement.style.setProperty("--font-scale", String(scale));
 }
 
 export function AccentProvider() {
@@ -29,9 +30,14 @@ export function AccentProvider() {
     }
 
     try {
-      const fontVar = localStorage.getItem(FONT_KEY);
-      if (fontVar) {
-        applyFont(fontVar);
+      const fontRaw = localStorage.getItem(FONT_KEY);
+      if (fontRaw) {
+        try {
+          const parsed = JSON.parse(fontRaw);
+          applyFont(parsed.cssVar, parsed.scale ?? 1);
+        } catch {
+          applyFont(fontRaw, 1);
+        }
       }
     } catch {
       // ignore
@@ -43,8 +49,8 @@ export function AccentProvider() {
     }
 
     function handleFontChange(e: Event) {
-      const { fontVar } = (e as CustomEvent).detail;
-      applyFont(fontVar);
+      const { fontVar, scale } = (e as CustomEvent).detail;
+      applyFont(fontVar, scale ?? 1);
     }
 
     window.addEventListener("accent-change", handleAccentChange);

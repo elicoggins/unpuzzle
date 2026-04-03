@@ -19,6 +19,7 @@
   --color-score-blunder: #ff0040;
   --font-heading: "Orbitron", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+  --font-scale: 1;
 }
 
 * {
@@ -29,6 +30,7 @@ body {
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   font-family: var(--font-heading);
+  font-size: calc(var(--font-scale) * 16px);
   margin: 0;
 }
 
