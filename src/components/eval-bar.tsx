@@ -52,11 +52,11 @@ export function EvalBar({ eval: cp, isMate, mateIn, height, orientation }: EvalB
       style={{ width: 28, height }}
     >
       {/* Black background (entire bar) */}
-      <div className="absolute inset-0 bg-[#333340]" />
+      <div className="absolute inset-0 bg-[#333333]" />
 
       {/* White fill from bottom */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-[#e8e8f0] transition-all duration-500 ease-out"
+        className="absolute bottom-0 left-0 right-0 bg-[#e8e8e8] transition-all duration-500 ease-out"
         style={{ height: `${whitePercent}%` }}
       />
 
@@ -64,8 +64,8 @@ export function EvalBar({ eval: cp, isMate, mateIn, height, orientation }: EvalB
       <div
         className={`absolute left-0 right-0 flex items-center justify-center text-[10px] font-bold font-[family-name:var(--font-mono)] select-none ${
           showLabelOnBottom
-            ? "bottom-0 text-[#333340] h-5"
-            : "top-0 text-[#e8e8f0] h-5"
+            ? "bottom-0 text-[#333333] h-5"
+            : "top-0 text-[#e8e8e8] h-5"
         }`}
       >
         {label}

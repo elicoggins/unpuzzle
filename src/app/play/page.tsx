@@ -35,13 +35,7 @@ export default function PlayPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [sessionScores, setSessionScores] = useState<number[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = localStorage.getItem("session-scores");
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  });
+  const [sessionScores, setSessionScores] = useState<number[]>([]);
   const [boardSize, setBoardSize] = useState(400);
   const [engineDepth, setEngineDepth] = useState<DepthUpdate | null>(null);
   const [engineReady, setEngineReady] = useState(false);
@@ -57,6 +51,14 @@ export default function PlayPage() {
   useEffect(() => {
     const engine = getEngine();
     engine.init().then(() => setEngineReady(true));
+  }, []);
+
+  // Load session scores from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("session-scores");
+      if (stored) setSessionScores(JSON.parse(stored));
+    } catch {}
   }, []);
 
   // Set initial board size on mount and recalculate on window resize

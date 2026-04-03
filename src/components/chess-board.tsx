@@ -50,13 +50,13 @@ export function ChessBoard({
             borderRadius: "0",
           },
           darkSquareStyle: {
-            backgroundColor: "#2a2a3a",
+            backgroundColor: "#2e2e2e",
           },
           lightSquareStyle: {
-            backgroundColor: "#3d3d50",
+            backgroundColor: "#424242",
           },
           dropSquareStyle: {
-            boxShadow: "inset 0 0 1px 6px rgba(124, 111, 240, 0.5)",
+            boxShadow: "inset 0 0 1px 6px rgba(57, 255, 20, 0.4)",
           },
         }}
       />

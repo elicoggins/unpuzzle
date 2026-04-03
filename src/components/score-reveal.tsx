@@ -52,7 +52,7 @@ export function ScoreReveal({
             className="text-3xl font-bold font-[family-name:var(--font-mono)]"
             style={{ color }}
           >
-            {centipawnLoss === 0 ? "0" : `−${centipawnLoss}`}
+            −{(centipawnLoss / 100).toFixed(2)}
             {glyph && (
               <span className="text-lg ml-1 opacity-80">{glyph}</span>
             )}
