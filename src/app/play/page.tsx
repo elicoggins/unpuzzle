@@ -407,6 +407,7 @@ export default function PlayPage() {
       styles[sq] = {
         background: "radial-gradient(circle, color-mix(in srgb, var(--color-accent) 40%, transparent) 25%, transparent 25%)",
         borderRadius: "50%",
+        cursor: "pointer",
       };
     }
 
@@ -448,6 +449,12 @@ export default function PlayPage() {
         wasAlreadySelectedRef.current = false;
         return;
       }
+      // If a piece is already selected and this square is a legal destination,
+      // leave the selection intact so onSquareClick can execute the move.
+      if (selectedSquareRef.current && legalMoveSquares.includes(square)) {
+        wasAlreadySelectedRef.current = false;
+        return;
+      }
       // Track if this piece was already selected before this mousedown
       wasAlreadySelectedRef.current = selectedSquareRef.current === square;
       const game = gameRef.current;
@@ -463,13 +470,35 @@ export default function PlayPage() {
         wasAlreadySelectedRef.current = false;
       }
     },
-    [gameState]
+    [gameState, legalMoveSquares]
   );
 
   const onSquareClick = useCallback(
     ({ square }: SquareHandlerArgs) => {
       if (gameState !== "playing") return;
       const game = gameRef.current;
+
+      // If a piece is already selected and this square is a legal destination, move there
+      if (selectedSquareRef.current && legalMoveSquares.includes(square)) {
+        const from = selectedSquareRef.current;
+        try {
+          const moveResult = game.move({ from, to: square, promotion: "q" });
+          if (moveResult) {
+            setFen(game.fen());
+            setMoveHistory((prev) => [...prev, moveResult.san]);
+            setLegalMoveSquares([]);
+            setSelectedSquare(null);
+            selectedSquareRef.current = null;
+            const uciMove = from + square + (moveResult.promotion || "");
+            setPendingMove({ uci: uciMove, san: moveResult.san });
+            setGameState("confirming");
+          }
+        } catch {
+          // not a legal move, fall through to selection logic
+        }
+        return;
+      }
+
       const moves = game.moves({ square: square as any, verbose: true });
       if (moves.length === 0) {
         setLegalMoveSquares([]);
@@ -477,7 +506,7 @@ export default function PlayPage() {
         selectedSquareRef.current = null;
       }
     },
-    [gameState]
+    [gameState, legalMoveSquares]
   );
 
   return (
@@ -607,7 +636,7 @@ export default function PlayPage() {
           {/* Click-to-undo overlay during confirming */}
           {gameState === "confirming" && (
             <div
-              className="absolute inset-0 z-[5] cursor-pointer"
+              className="absolute inset-0 z-[5] cursor-default"
               onMouseDown={undoMove}
             />
           )}
