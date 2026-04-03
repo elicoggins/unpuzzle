@@ -19,7 +19,7 @@ export function Nav() {
         href="/"
         className="text-xl font-bold tracking-tight text-text-primary hover:text-accent transition-colors"
       >
-        unpuzzle
+        un<span className="text-accent">puzzle</span>
       </Link>
       <div className="flex items-center gap-2">
         {links.map((link) => {

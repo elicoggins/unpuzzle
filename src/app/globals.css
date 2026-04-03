@@ -10,13 +10,13 @@
   --color-text-primary: #e8e8f0;
   --color-text-secondary: #9898a8;
   --color-text-muted: #686878;
-  --color-accent: #d4a843;
-  --color-accent-hover: #e0bc5e;
-  --color-score-perfect: #4ade80;
-  --color-score-good: #a3e635;
-  --color-score-inaccuracy: #facc15;
-  --color-score-mistake: #f97316;
-  --color-score-blunder: #ef4444;
+  --color-accent: #39ff14;
+  --color-accent-hover: #6fff52;
+  --color-score-perfect: #39ff14;
+  --color-score-good: #39ff14;
+  --color-score-inaccuracy: #ffff00;
+  --color-score-mistake: #ff6600;
+  --color-score-blunder: #ff0040;
   --font-heading: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }

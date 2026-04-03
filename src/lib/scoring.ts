@@ -26,11 +26,11 @@ export function getScoreColor(centipawnLoss: number): string {
 }
 
 export function getScoreArrowColor(centipawnLoss: number): string {
-  if (centipawnLoss <= 10) return "rgba(74, 222, 128, 0.7)";   // green
-  if (centipawnLoss <= 25) return "rgba(163, 230, 53, 0.7)";   // lime
-  if (centipawnLoss <= 50) return "rgba(250, 204, 21, 0.7)";   // yellow
-  if (centipawnLoss <= 100) return "rgba(249, 115, 22, 0.7)";  // orange
-  return "rgba(239, 68, 68, 0.7)";                              // red
+  if (centipawnLoss <= 10) return "rgba(57, 255, 20, 0.75)";    // neon green
+  if (centipawnLoss <= 25) return "rgba(57, 255, 20, 0.55)";    // neon green (softer)
+  if (centipawnLoss <= 50) return "rgba(255, 255, 0, 0.7)";     // neon yellow
+  if (centipawnLoss <= 100) return "rgba(255, 102, 0, 0.7)";    // neon orange
+  return "rgba(255, 0, 64, 0.75)";                               // neon red
 }
 
 export function computeACPL(losses: number[]): number {

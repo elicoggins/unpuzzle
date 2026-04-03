@@ -17,7 +17,7 @@ type GameState = "loading" | "playing" | "evaluating" | "scored";
 function computeMaxBoardSize(): number {
   if (typeof window === "undefined") return 400;
   const navHeight = 57;
-  const padding = 32;
+  const padding = 72;
   const maxHeight = window.innerHeight - navHeight - padding;
   // Left panel 220 + right panel 240 + eval bar 28 + gaps (4 * 16)
   const horizontalChrome = 220 + 240 + 28 + 64;
@@ -279,7 +279,7 @@ export default function PlayPage() {
       arrows.push({
         startSquare: feedback.bestMoveUci.slice(0, 2),
         endSquare: feedback.bestMoveUci.slice(2, 4),
-        color: "rgba(74, 222, 128, 0.75)",
+        color: "rgba(57, 255, 20, 0.75)",
       });
     }
 
