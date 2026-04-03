@@ -7,37 +7,24 @@ interface ScoreRevealProps {
   centipawnLoss: number;
   bestMoveSan: string;
   category?: string;
-  evalBefore: number;
   evalAfterBest: number;
   evalAfterPlayed: number;
   isMateBefore: boolean;
   mateInBefore: number | null;
   isMateAfterPlayed: boolean;
-  mateInAfterPlayed: number | null;
   sideToMove: "w" | "b";
   show: boolean;
-}
-
-function formatEval(cp: number, isMate?: boolean, mateIn?: number | null): string {
-  if (isMate && mateIn != null) {
-    const sign = mateIn > 0 ? "+" : "-";
-    return `${sign}M${Math.abs(mateIn)}`;
-  }
-  const sign = cp >= 0 ? "+" : "";
-  return `${sign}${(cp / 100).toFixed(1)}`;
 }
 
 export function ScoreReveal({
   centipawnLoss,
   bestMoveSan,
   category,
-  evalBefore,
   evalAfterBest,
   evalAfterPlayed,
   isMateBefore,
   mateInBefore,
   isMateAfterPlayed,
-  mateInAfterPlayed,
   sideToMove,
   show,
 }: ScoreRevealProps) {
@@ -95,12 +82,12 @@ export function ScoreReveal({
             )}
           </motion.div>
 
-          {/* Two metric chips */}
+          {/* Metrics + best/category — shared grid for alignment */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex gap-6 mt-1"
+            className="grid grid-cols-2 w-full mt-1 gap-y-2"
           >
             {/* Pawn Loss */}
             <div className="flex flex-col items-center gap-0.5">
@@ -127,47 +114,26 @@ export function ScoreReveal({
                 accuracy
               </span>
             </div>
-          </motion.div>
 
-          {/* Eval bar: before → after */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex items-center gap-2 text-xs font-[family-name:var(--font-mono)] mt-1"
-          >
-            <span className="text-text-secondary">
-              {formatEval(evalBefore, isMateBefore, mateInBefore)}
-            </span>
-            <span className="text-text-muted">→</span>
-            <span className="text-text-secondary">
-              {formatEval(evalAfterPlayed, isMateAfterPlayed, mateInAfterPlayed)}
-            </span>
-          </motion.div>
+            {/* Best move */}
+            <div className="flex justify-center">
+              <span className="text-xs text-text-muted">
+                best:{" "}
+                <span className="text-text-secondary font-[family-name:var(--font-mono)] font-medium">
+                  {bestMoveSan}
+                </span>
+              </span>
+            </div>
 
-          {/* Best move — always shown */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.55 }}
-            className="text-xs text-text-muted mt-0.5"
-          >
-            best:{" "}
-            <span className="text-text-secondary font-[family-name:var(--font-mono)] font-medium">
-              {bestMoveSan}
-            </span>
+            {/* Category */}
+            <div className="flex justify-center">
+              {category && (
+                <span className="text-[10px] uppercase tracking-widest text-text-muted border border-border rounded-full px-2 py-0.5">
+                  {category}
+                </span>
+              )}
+            </div>
           </motion.div>
-
-          {category && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.65 }}
-              className="text-[10px] uppercase tracking-widest text-text-muted border border-border rounded-full px-2 py-0.5"
-            >
-              {category}
-            </motion.div>
-          )}
         </motion.div>
       )}
     </AnimatePresence>

@@ -931,13 +931,11 @@ export default function PlayPage() {
                 centipawnLoss={feedback.centipawnLoss}
                 bestMoveSan={feedback.bestMoveSan}
                 category={position?.category}
-                evalBefore={feedback.evalBefore}
                 evalAfterBest={feedback.evalAfterBest}
                 evalAfterPlayed={feedback.evalAfterPlayed}
                 isMateBefore={feedback.isMateBefore}
                 mateInBefore={feedback.mateInBefore}
                 isMateAfterPlayed={feedback.isMateAfterPlayed}
-                mateInAfterPlayed={feedback.mateInAfterPlayed}
                 sideToMove={position?.sideToMove ?? "w"}
                 show={true}
               />
