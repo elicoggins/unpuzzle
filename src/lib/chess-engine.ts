@@ -63,7 +63,8 @@ class StockfishEngine {
 
     return new Promise((resolve, reject) => {
       try {
-        this.worker = new Worker("/stockfish/stockfish-18-lite-single.js");
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+        this.worker = new Worker(`${basePath}/stockfish/stockfish-18-lite-single.js`);
 
         this.worker.onmessage = (event) => {
           const line = event.data;
