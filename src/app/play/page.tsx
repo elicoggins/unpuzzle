@@ -11,6 +11,7 @@ import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@
 import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
 import { getRandomPosition } from "@/lib/positions";
+import { playMoveSound, playCaptureSound, playGoodSound, playBadSound } from "@/lib/sounds";
 import { loadDepth } from "@/app/settings/page";
 import type { Position, EvalFeedback } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
@@ -272,6 +273,17 @@ export default function PlayPage() {
       };
 
       setFeedback(result);
+
+      // Feedback sound: perfect (0 CPL / found mate), good (≤25 CPL), bad otherwise
+      const isMateBefore = evalBefore.isMate;
+      const youHadMate = isMateBefore && evalBefore.mateIn != null &&
+        ((sideToMove === "w" && evalBefore.mateIn > 0) || (sideToMove === "b" && evalBefore.mateIn < 0));
+      const youFoundMate = youHadMate && centipawnLoss === 0;
+      if (!result.isMateAfterPlayed && (youFoundMate || centipawnLoss <= 25)) {
+        playGoodSound();
+      } else {
+        playBadSound();
+      }
       setSessionScores((prev) => {
         // Cap at 300cp for ACPL purposes — mate scores (~100000) would otherwise destroy the average
         const next = [...prev, Math.min(centipawnLoss, 300)];
@@ -315,6 +327,8 @@ export default function PlayPage() {
         });
 
         if (!moveResult) return false;
+
+        if (moveResult.captured) { playCaptureSound(); } else { playMoveSound(); }
 
         setFen(game.fen());
         setMoveHistory((prev) => [...prev, moveResult.san]);
@@ -498,6 +512,7 @@ export default function PlayPage() {
           try {
             const moveResult = game.move({ from, to: square, promotion: "q" });
             if (moveResult) {
+              if (moveResult.captured) { playCaptureSound(); } else { playMoveSound(); }
               setFen(game.fen());
               setMoveHistory((prev) => [...prev, moveResult.san]);
               setLegalMoveSquares([]);
@@ -545,6 +560,7 @@ export default function PlayPage() {
         try {
           const moveResult = game.move({ from, to: square, promotion: "q" });
           if (moveResult) {
+            if (moveResult.captured) { playCaptureSound(); } else { playMoveSound(); }
             setFen(game.fen());
             setMoveHistory((prev) => [...prev, moveResult.san]);
             setLegalMoveSquares([]);

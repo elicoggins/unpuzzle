@@ -27,8 +27,6 @@ export interface EvalResult {
   pv: string[];
   /** All MultiPV lines at final depth */
   lines: EngineLine[];
-  /** Where this result came from */
-  source: "lichess" | "local";
 }
 
 export interface DepthUpdate {
@@ -177,7 +175,6 @@ class StockfishEngine {
           depth: this.currentDepth,
           pv: this.currentPv,
           lines,
-          source: "local",
         });
         this.pendingResolve = null;
         this.onDepthUpdate = null;
