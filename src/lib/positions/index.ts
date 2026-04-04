@@ -1,4 +1,5 @@
 import type { Position, PositionCategory } from "../types";
+// Position is used by getRandomPosition return type
 import { TACTICAL_POSITIONS } from "./tactical";
 import { BALANCED_POSITIONS } from "./balanced";
 import { CRITICAL_POSITIONS } from "./critical";
@@ -7,7 +8,13 @@ import { ENDGAME_POSITIONS } from "./endgame";
 
 export type { PositionCategory };
 
-export interface CuratedPosition extends Omit<Position, "id"> {
+export interface CuratedPosition {
+  id: string;
+  fen: string;
+  sideToMove: "w" | "b";
+  opening: string | null;
+  phase: "opening" | "middlegame" | "endgame";
+  moveNumber: number;
   category: PositionCategory;
   puzzleRating?: number | null;
 }
@@ -24,7 +31,7 @@ const WEIGHTS: Record<PositionCategory, number> = {
   tactical: 0.10, balanced: 0.30, critical: 0.25, tricky: 0.10, endgame: 0.25,
 };
 
-export function getWeightedRandomPosition(): CuratedPosition & { id: string } {
+export function getWeightedRandomPosition(): CuratedPosition {
   const roll = Math.random();
   let cum = 0;
   let cat: PositionCategory = "balanced";
@@ -33,7 +40,7 @@ export function getWeightedRandomPosition(): CuratedPosition & { id: string } {
   }
   const pool = CATEGORY_POOLS[cat];
   const i = Math.floor(Math.random() * pool.length);
-  return { ...pool[i], id: `${cat}-${i}` };
+  return pool[i];
 }
 
 export function getRandomPosition(): Position {

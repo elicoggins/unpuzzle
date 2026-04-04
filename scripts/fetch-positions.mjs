@@ -27,6 +27,21 @@ const OUT_DIR = join(__dirname, "..", "src", "lib", "positions");
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+/** FNV-1a 32-bit hash of a string → 8-char lowercase hex */
+function fnvHash(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+const CAT_PREFIX = { tactical: "tac", balanced: "bal", critical: "crt", tricky: "tri", endgame: "end" };
+function positionId(fen, category) {
+  return `${CAT_PREFIX[category] ?? "unk"}_${fnvHash(fen)}`;
+}
+
 function sideFromFen(fen) { return fen.split(" ")[1] ?? "w"; }
 function moveNumFromFen(fen) { return parseInt(fen.split(" ")[5] ?? "1", 10); }
 function phaseFromMoveNum(n) {
@@ -325,7 +340,8 @@ async function main() {
     ];
     for (const p of positions) {
       const ratingPart = p.puzzleRating != null ? `, puzzleRating: ${p.puzzleRating}` : "";
-      lines.push(`  { fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}"${ratingPart} },`);
+      const id = positionId(p.fen, p.category);
+      lines.push(`  { id: "${id}", fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}"${ratingPart} },`);
     }
     lines.push(`];`);
     lines.push(``);
