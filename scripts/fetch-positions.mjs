@@ -245,7 +245,7 @@ async function main() {
     for (const game of games.slice(0, 15)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
       if (moves.length < 30) continue;
-      for (const ply of [25, 33, 41]) {
+      for (const ply of [24, 25, 32, 33, 40, 41]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
         if (pos && pos.phase === "middlegame") add({ ...pos, category: "balanced" });
@@ -263,7 +263,7 @@ async function main() {
     for (const game of games.slice(0, 18)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
       if (moves.length < 40) continue;
-      for (const ply of [35, 39, 43, 47]) {
+      for (const ply of [34, 35, 38, 39, 42, 43, 46, 47]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
         if (pos) add({ ...pos, category: "critical" });
@@ -280,7 +280,7 @@ async function main() {
     for (const game of games.slice(0, 18)) {
       const moves = (game.moves ?? "").trim().split(/\s+/);
       if (moves.length < 52) continue;
-      for (const ply of [51, 55, 63, 71, 81, 91]) {
+      for (const ply of [50, 51, 54, 55, 62, 63, 70, 71, 80, 81, 90, 91]) {
         if (ply >= moves.length) continue;
         const pos = extractPositionFromGame(game, ply);
         if (pos && materialCount(pos.fen) <= 38) add({ ...pos, category: "endgame" });
