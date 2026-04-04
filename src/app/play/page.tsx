@@ -274,12 +274,12 @@ export default function PlayPage() {
 
       setFeedback(result);
 
-      // Feedback sound: perfect (0 CPL / found mate), good (≤25 CPL), bad otherwise
+      // Feedback sound: perfect (0 CPL / found mate), good (≤50 CPL), bad otherwise
       const isMateBefore = evalBefore.isMate;
       const youHadMate = isMateBefore && evalBefore.mateIn != null &&
         ((sideToMove === "w" && evalBefore.mateIn > 0) || (sideToMove === "b" && evalBefore.mateIn < 0));
       const youFoundMate = youHadMate && centipawnLoss === 0;
-      if (!result.isMateAfterPlayed && (youFoundMate || centipawnLoss <= 25)) {
+      if (!result.isMateAfterPlayed && (youFoundMate || centipawnLoss <= 50)) {
         playGoodSound();
       } else {
         playBadSound();

@@ -71,11 +71,11 @@ All evals from Stockfish are **side-to-move perspective** (positive = side to mo
 | CPL | Label | Glyph |
 |---|---|---|
 | 0 | Perfect | !! |
-| ≤10 | Excellent | ! |
-| ≤25 | Good | (none) |
-| ≤50 | Inaccuracy | ?! |
-| ≤100 | Mistake | ? |
-| >100 | Blunder | ?? |
+| ≤15 | Excellent | ! |
+| ≤50 | Good | (none) |
+| ≤90 | Inaccuracy | ?! |
+| ≤150 | Mistake | ? |
+| >150 | Blunder | ?? |
 
 ## Position Pool
 

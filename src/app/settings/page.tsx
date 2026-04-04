@@ -178,7 +178,7 @@ export default function SettingsPage() {
           {/* Accent Color */}
           <div className="border border-border rounded-lg p-5 space-y-4">
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
-              accent color
+              theme
             </h2>
 
             {/* Presets */}

@@ -1,35 +1,35 @@
 export function getScoreLabel(centipawnLoss: number): string {
   if (centipawnLoss === 0) return "Perfect";
-  if (centipawnLoss <= 10) return "Excellent";
-  if (centipawnLoss <= 25) return "Good";
-  if (centipawnLoss <= 50) return "Inaccuracy";
-  if (centipawnLoss <= 100) return "Mistake";
+  if (centipawnLoss <= 15) return "Excellent";
+  if (centipawnLoss <= 50) return "Good";
+  if (centipawnLoss <= 90) return "Inaccuracy";
+  if (centipawnLoss <= 150) return "Mistake";
   return "Blunder";
 }
 
 export function getScoreGlyph(centipawnLoss: number): string {
   if (centipawnLoss === 0) return "!!";
-  if (centipawnLoss <= 10) return "!";
-  if (centipawnLoss <= 25) return "";
-  if (centipawnLoss <= 50) return "?!";
-  if (centipawnLoss <= 100) return "?";
+  if (centipawnLoss <= 15) return "!";
+  if (centipawnLoss <= 50) return "";
+  if (centipawnLoss <= 90) return "?!";
+  if (centipawnLoss <= 150) return "?";
   return "??";
 }
 
 export function getScoreColor(centipawnLoss: number): string {
   if (centipawnLoss === 0) return "var(--color-score-perfect)";
-  if (centipawnLoss <= 10) return "var(--color-score-perfect)";
-  if (centipawnLoss <= 25) return "var(--color-score-good)";
-  if (centipawnLoss <= 50) return "var(--color-score-inaccuracy)";
-  if (centipawnLoss <= 100) return "var(--color-score-mistake)";
+  if (centipawnLoss <= 15) return "var(--color-score-perfect)";
+  if (centipawnLoss <= 50) return "var(--color-score-good)";
+  if (centipawnLoss <= 90) return "var(--color-score-inaccuracy)";
+  if (centipawnLoss <= 150) return "var(--color-score-mistake)";
   return "var(--color-score-blunder)";
 }
 
 export function getScoreArrowColor(centipawnLoss: number): string {
-  if (centipawnLoss <= 10) return "rgba(57, 255, 20, 0.75)";    // neon green
-  if (centipawnLoss <= 25) return "rgba(57, 255, 20, 0.55)";    // neon green (softer)
-  if (centipawnLoss <= 50) return "rgba(255, 255, 0, 0.7)";     // neon yellow
-  if (centipawnLoss <= 100) return "rgba(255, 102, 0, 0.7)";    // neon orange
+  if (centipawnLoss <= 15) return "rgba(57, 255, 20, 0.75)";    // neon green
+  if (centipawnLoss <= 50) return "rgba(57, 255, 20, 0.55)";    // neon green (softer)
+  if (centipawnLoss <= 90) return "rgba(255, 255, 0, 0.7)";     // neon yellow
+  if (centipawnLoss <= 150) return "rgba(255, 102, 0, 0.7)";    // neon orange
   return "rgba(255, 0, 64, 0.75)";                               // neon red
 }
 
