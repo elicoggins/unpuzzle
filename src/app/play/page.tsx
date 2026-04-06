@@ -7,6 +7,7 @@ import { EvalBar } from "@/components/eval-bar";
 import { EngineLines } from "@/components/engine-lines";
 import { Timer } from "@/components/timer";
 import { ScoreReveal } from "@/components/score-reveal";
+import { MoveExplanation } from "@/components/move-explanation";
 import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@/lib/chess-engine";
 import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
@@ -17,6 +18,25 @@ import type { Position, EvalFeedback } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
 type GameState = "loading" | "playing" | "confirming" | "evaluating" | "scored";
+
+/** Convert a UCI PV to SAN moves, starting from a given FEN. */
+function uciPvToSan(fen: string, uciMoves: string[]): string[] {
+  const sans: string[] = [];
+  try {
+    const g = new Chess(fen);
+    for (const uci of uciMoves) {
+      if (uci.length < 4) break;
+      const m = g.move({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+        promotion: uci.length > 4 ? uci[4] : undefined,
+      });
+      if (!m) break;
+      sans.push(m.san);
+    }
+  } catch { /* partial conversion is fine */ }
+  return sans;
+}
 
 function computeMaxBoardSize(): number {
   if (typeof window === "undefined") return 400;
@@ -31,8 +51,8 @@ function computeMaxBoardSize(): number {
   }
   const padding = 72;
   const maxHeight = window.innerHeight - navHeight - padding;
-  // Left panel 220 + right panel 240 + eval bar 28 + gaps (4 * 16)
-  const horizontalChrome = 220 + 240 + 28 + 64;
+  // Left panel 220 + right panel 260 + eval bar 28 + gaps (4 * 16)
+  const horizontalChrome = 220 + 260 + 28 + 64;
   const maxWidth = window.innerWidth - horizontalChrome;
   return Math.max(280, Math.min(maxHeight, maxWidth));
 }
@@ -194,9 +214,11 @@ export default function PlayPage() {
       // Store final engine lines from the pre-move evaluation
       setEngineLines(evalBefore.lines);
 
-      // 2. Get the best move in SAN
+      // 2. Get the best move in SAN and full best continuation
       const tmpGame = new Chess(originalFen);
       let bestMoveSan = evalBefore.bestMove || "—";
+      const bestLineUci = evalBefore.pv.slice(0, 8);
+      let bestLine: string[] = [];
       if (evalBefore.bestMove && evalBefore.bestMove.length >= 4) {
         try {
           const bestMoveResult = tmpGame.move({
@@ -208,6 +230,7 @@ export default function PlayPage() {
         } catch {
           // fallback to UCI notation
         }
+        bestLine = uciPvToSan(originalFen, bestLineUci);
       }
 
       // 3. Apply the user's move to get the resulting FEN
@@ -224,6 +247,10 @@ export default function PlayPage() {
       const evalAfter: EvalResult = await evaluateWithFallback(afterFen, loadDepth(), (update) => {
         setEngineDepth(update);
       });
+
+      // Save refutation line (opponent's best response after the played move)
+      const refutationLineUci = evalAfter.pv.slice(0, 6);
+      const refutationLine = uciPvToSan(afterFen, refutationLineUci);
 
       // 5. Compute post-move eval from original side's perspective
       const evalAfterFromOrigPerspective = -evalAfter.eval;
@@ -270,6 +297,10 @@ export default function PlayPage() {
         mateInBefore: mateInBeforeWhite,
         isMateAfterPlayed: evalAfter.isMate && !afterGame.isCheckmate() && evalAfter.mateIn != null && evalAfter.mateIn > 0,
         mateInAfterPlayed: mateInAfterWhite,
+        bestLine,
+        bestLineUci,
+        refutationLine,
+        refutationLineUci,
       };
 
       setFeedback(result);
@@ -395,6 +426,70 @@ export default function PlayPage() {
       }
     },
     [position, engineLines, gameState]
+  );
+
+  /** Browse the best continuation on the board */
+  const onBestLineClick = useCallback(
+    (moveIdx: number) => {
+      if (!position || !feedback || gameState !== "scored") return;
+      const uciMoves = feedback.bestLineUci;
+      const path: { san: string; fen: string }[] = [];
+      const game = new Chess(position.fen);
+      for (let i = 0; i <= moveIdx && i < uciMoves.length; i++) {
+        const uci = uciMoves[i];
+        if (uci.length < 4) break;
+        try {
+          const m = game.move({
+            from: uci.slice(0, 2),
+            to: uci.slice(2, 4),
+            promotion: uci.length > 4 ? uci[4] : undefined,
+          });
+          if (!m) break;
+          path.push({ san: m.san, fen: game.fen() });
+        } catch { break; }
+      }
+      if (path.length > 0) {
+        setBrowsePath(path);
+        setBrowseIdx(path.length - 1);
+      }
+    },
+    [position, feedback, gameState]
+  );
+
+  /** Browse the refutation line (starts from user's played move) */
+  const onRefutationLineClick = useCallback(
+    (moveIdx: number) => {
+      if (!position || !feedback || !lastPlayedUci || gameState !== "scored") return;
+      // Start from the position after the user's move
+      const afterGame = new Chess(position.fen);
+      const userMove = afterGame.move({
+        from: lastPlayedUci.slice(0, 2),
+        to: lastPlayedUci.slice(2, 4),
+        promotion: lastPlayedUci.length > 4 ? lastPlayedUci[4] : undefined,
+      });
+      if (!userMove) return;
+      // First entry is the user's move
+      const path: { san: string; fen: string }[] = [{ san: userMove.san, fen: afterGame.fen() }];
+      const uciMoves = feedback.refutationLineUci;
+      for (let i = 0; i <= moveIdx && i < uciMoves.length; i++) {
+        const uci = uciMoves[i];
+        if (uci.length < 4) break;
+        try {
+          const m = afterGame.move({
+            from: uci.slice(0, 2),
+            to: uci.slice(2, 4),
+            promotion: uci.length > 4 ? uci[4] : undefined,
+          });
+          if (!m) break;
+          path.push({ san: m.san, fen: afterGame.fen() });
+        } catch { break; }
+      }
+      if (path.length > 0) {
+        setBrowsePath(path);
+        setBrowseIdx(path.length - 1);
+      }
+    },
+    [position, feedback, lastPlayedUci, gameState]
   );
 
   const sessionACPL =
@@ -608,15 +703,10 @@ export default function PlayPage() {
       {/* ── Left Panel ── */}
       <div
         className="hidden md:flex flex-col gap-3"
-        style={{ width: 220 }}
+        style={{ width: 220, height: boardSize }}
       >
         {/* Puzzle info */}
         <div className="border border-border rounded-lg p-4 space-y-3">
-          {position?.opening && (
-            <div className="text-sm font-medium text-text-primary">
-              {position.opening}
-            </div>
-          )}
           <div className="flex items-center gap-2 text-xs text-text-muted">
             {position && (
               <>
@@ -691,74 +781,10 @@ export default function PlayPage() {
             </div>
           </div>
         )}
-      </div>
 
-      {/* ── Eval Bar + Board (center) ── */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <EvalBar
-          eval={evalForBar.eval}
-          isMate={evalForBar.isMate}
-          mateIn={evalForBar.mateIn}
-          height={boardSize}
-          orientation={boardOrientation}
-          revealed={gameState === "scored"}
-        />
-        <div
-          className="relative flex-shrink-0"
-          ref={boardContainerRef}
-          style={{ width: boardSize, height: boardSize }}
-        >
-          <ChessBoard
-            position={displayFen}
-            onPieceDrop={onPieceDrop}
-            onSquareMouseDown={onSquareMouseDown}
-            onSquareClick={onSquareClick}
-            boardOrientation={boardOrientation}
-            allowDragging={gameState === "playing"}
-            arrows={displayArrows}
-            squareStyles={displaySquareStyles}
-            boardKey={position?.id}
-          />
-
-          {/* Loading overlay */}
-          {gameState === "loading" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-bg-primary/80 rounded-lg">
-              <div className="text-text-muted animate-pulse">loading...</div>
-            </div>
-          )}
-
-          {/* Click-to-undo overlay during confirming */}
-          {gameState === "confirming" && (
-            <div
-              className="absolute inset-0 z-[5] cursor-default"
-              onMouseDown={undoMove}
-            />
-          )}
-
-          {/* Resize handle */}
-          <div
-            onMouseDown={handleResizeStart}
-            className="absolute -bottom-1 -right-1 w-4 h-4 cursor-nwse-resize z-10 group hidden md:block"
-            title="Drag to resize"
-          >
-            <svg
-              viewBox="0 0 16 16"
-              className="w-full h-full text-text-muted/40 group-hover:text-text-muted transition-colors"
-            >
-              <path d="M14 14L8 14L14 8Z" fill="currentColor" />
-              <path d="M14 14L11 14L14 11Z" fill="currentColor" opacity="0.5" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right Panel ── */}
-      <div
-        className="flex flex-col gap-3 w-full md:w-[280px]"
-      >
         {/* Move history */}
-        <div className="hidden md:flex border border-border rounded-lg flex-col overflow-hidden" style={{ height: 200 }}>
-          <div className="px-4 py-2 border-b border-border bg-bg-secondary">
+        <div className="border border-border rounded-lg flex-col overflow-hidden flex flex-1 min-h-0">
+          <div className="px-3 py-1.5 border-b border-border bg-bg-secondary">
             <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
               moves
             </span>
@@ -883,9 +909,74 @@ export default function PlayPage() {
             })()}
           </div>
         </div>
+      </div>
 
+      {/* ── Eval Bar + Board (center) ── */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <EvalBar
+          eval={evalForBar.eval}
+          isMate={evalForBar.isMate}
+          mateIn={evalForBar.mateIn}
+          height={boardSize}
+          orientation={boardOrientation}
+          revealed={gameState === "scored"}
+        />
+        <div
+          className="relative flex-shrink-0"
+          ref={boardContainerRef}
+          style={{ width: boardSize, height: boardSize }}
+        >
+          <ChessBoard
+            position={displayFen}
+            onPieceDrop={onPieceDrop}
+            onSquareMouseDown={onSquareMouseDown}
+            onSquareClick={onSquareClick}
+            boardOrientation={boardOrientation}
+            allowDragging={gameState === "playing"}
+            arrows={displayArrows}
+            squareStyles={displaySquareStyles}
+            boardKey={position?.id}
+          />
+
+          {/* Loading overlay */}
+          {gameState === "loading" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-bg-primary/80 rounded-lg">
+              <div className="text-text-muted animate-pulse">loading...</div>
+            </div>
+          )}
+
+          {/* Click-to-undo overlay during confirming */}
+          {gameState === "confirming" && (
+            <div
+              className="absolute inset-0 z-[5] cursor-default"
+              onMouseDown={undoMove}
+            />
+          )}
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={handleResizeStart}
+            className="absolute -bottom-1 -right-1 w-4 h-4 cursor-nwse-resize z-10 group hidden md:block"
+            title="Drag to resize"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              className="w-full h-full text-text-muted/40 group-hover:text-text-muted transition-colors"
+            >
+              <path d="M14 14L8 14L14 8Z" fill="currentColor" />
+              <path d="M14 14L11 14L14 11Z" fill="currentColor" opacity="0.5" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right Panel ── */}
+      <div
+        className="flex flex-col gap-3 w-full md:w-[260px]"
+        style={{ height: boardSize }}
+      >
         {/* Engine lines (always visible) */}
-        <div className="order-2 md:order-1">
+        <div>
           {(gameState === "evaluating" || gameState === "scored") && engineLines.length > 0 && position ? (
             <EngineLines
               fen={position.fen}
@@ -914,8 +1005,40 @@ export default function PlayPage() {
           )}
         </div>
 
+        {/* Move explanation — fills remaining space, scrolls if needed */}
+        <div className="flex-1 min-h-0">
+          {gameState === "scored" && feedback ? (
+            <MoveExplanation
+              centipawnLoss={feedback.centipawnLoss}
+              evalBefore={feedback.evalBefore}
+              evalAfterPlayed={feedback.evalAfterPlayed}
+              sideToMove={position?.sideToMove ?? "w"}
+              bestMoveSan={feedback.bestMoveSan}
+              bestLine={feedback.bestLine}
+              refutationLine={feedback.refutationLine}
+              isMateBefore={feedback.isMateBefore}
+              mateInBefore={feedback.mateInBefore}
+              isMateAfterPlayed={feedback.isMateAfterPlayed}
+              show={true}
+              onBestLineClick={onBestLineClick}
+              onRefutationLineClick={onRefutationLineClick}
+            />
+          ) : (
+            <div className="border border-border rounded-lg overflow-hidden h-full">
+              <div className="px-3 py-1.5 border-b border-border bg-bg-secondary">
+                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+                  analysis
+                </span>
+              </div>
+              <div className="p-3">
+                <p className="text-sm text-text-muted/50 italic">Make a move to see analysis.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Feedback panel */}
-        <div className="order-1 md:order-2 border border-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[180px]">
+        <div className="border border-border rounded-lg p-4 flex flex-col items-center justify-center shrink-0" style={{ height: 230 }}>
           {gameState === "playing" && (
             <div className="text-center space-y-2">
               <div className="text-sm font-medium text-text-secondary">

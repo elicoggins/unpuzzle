@@ -163,6 +163,19 @@ class StockfishEngine {
         this.currentBestMove = moveMatch[1];
       }
 
+      // Reconcile PV 1 with bestmove — Stockfish's bestmove is authoritative,
+      // but the last info line for multipv 1 can lag behind due to aspiration
+      // window failures, hash effects, or incomplete final-depth iteration.
+      if (this.currentBestMove) {
+        if (this.currentPv[0] !== this.currentBestMove) {
+          this.currentPv = [this.currentBestMove, ...this.currentPv.slice(1)];
+        }
+        const pv1 = this.currentLines.get(1);
+        if (pv1 && pv1.pv[0] !== this.currentBestMove) {
+          this.currentLines.set(1, { ...pv1, pv: [this.currentBestMove, ...pv1.pv.slice(1)] });
+        }
+      }
+
       if (this.pendingResolve) {
         const lines = Array.from(this.currentLines.values()).sort(
           (a, b) => a.multipv - b.multipv

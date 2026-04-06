@@ -122,24 +122,14 @@ export function ScoreReveal({
               </span>
             </div>
 
-            {/* Best move */}
-            <div className="flex justify-center">
-              <span className="text-xs text-text-muted">
-                best:{" "}
-                <span className="text-text-secondary font-[family-name:var(--font-mono)] font-medium">
-                  {bestMoveSan}
-                </span>
-              </span>
-            </div>
-
             {/* Category */}
-            <div className="flex justify-center">
-              {category && (
+            {category && (
+              <div className="col-span-2 flex justify-center mt-1">
                 <span className="text-[10px] uppercase tracking-widest text-text-muted border border-border rounded-full px-2 py-0.5">
                   {category}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

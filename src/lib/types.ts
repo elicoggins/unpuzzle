@@ -31,4 +31,12 @@ export interface EvalFeedback {
   isMateAfterPlayed: boolean;
   /** Mate in N after the played move (white's perspective) */
   mateInAfterPlayed: number | null;
+  /** Best continuation from the original position (SAN moves) */
+  bestLine: string[];
+  /** Best continuation from the original position (UCI moves, for board browsing) */
+  bestLineUci: string[];
+  /** Opponent's best response line after the played move (SAN moves) */
+  refutationLine: string[];
+  /** Opponent's best response line after the played move (UCI moves, for board browsing) */
+  refutationLineUci: string[];
 }
