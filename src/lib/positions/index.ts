@@ -46,3 +46,24 @@ export function getWeightedRandomPosition(): CuratedPosition {
 export function getRandomPosition(): Position {
   return getWeightedRandomPosition();
 }
+
+/** Flat array of every position across all categories. */
+export function getAllPositions(): CuratedPosition[] {
+  return Object.values(CATEGORY_POOLS).flat();
+}
+
+/** Per-category position counts. */
+export function getPositionCounts(): Record<PositionCategory, number> {
+  const counts = {} as Record<PositionCategory, number>;
+  for (const [cat, pool] of Object.entries(CATEGORY_POOLS) as [PositionCategory, CuratedPosition[]][]) {
+    counts[cat] = pool.length;
+  }
+  return counts;
+}
+
+/** Pick a random position whose id is NOT in `decisions`. Returns null when all are sorted. */
+export function getUnsortedPosition(decisions: Record<string, string>): CuratedPosition | null {
+  const unsorted = getAllPositions().filter((p) => !(p.id in decisions));
+  if (unsorted.length === 0) return null;
+  return unsorted[Math.floor(Math.random() * unsorted.length)];
+}
