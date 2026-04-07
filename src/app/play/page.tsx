@@ -79,6 +79,7 @@ export default function PlayPage() {
   const [browseIdx, setBrowseIdx] = useState<number | null>(null);
   const [legalMoveSquares, setLegalMoveSquares] = useState<string[]>([]);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [highlightedSquares, setHighlightedSquares] = useState<Set<string>>(new Set());
   const selectedSquareRef = useRef<string | null>(null);
   const wasAlreadySelectedRef = useRef(false);
   const gameRef = useRef<Chess>(new Chess());
@@ -136,6 +137,7 @@ export default function PlayPage() {
     setLegalMoveSquares([]);
     setSelectedSquare(null);
     selectedSquareRef.current = null;
+    setHighlightedSquares(new Set());
     setTimerKey((k) => k + 1);
 
     const data = getRandomPosition();
@@ -579,7 +581,38 @@ export default function PlayPage() {
 
   const displayArrows = useMemo(() => browseIdx !== null ? [] : boardArrows, [browseIdx, boardArrows]);
 
-  const displaySquareStyles = useMemo(() => browseIdx !== null ? {} : squareStyles, [browseIdx, squareStyles]);
+  const rightDownSquareRef = useRef<string | null>(null);
+
+  const onSquareMouseUp = useCallback(({ square }: SquareHandlerArgs, e: React.MouseEvent) => {
+    if (e.button !== 2) return;
+    if (rightDownSquareRef.current === square) {
+      setHighlightedSquares((prev) => {
+        const next = new Set(prev);
+        if (next.has(square)) { next.delete(square); } else { next.add(square); }
+        return next;
+      });
+    }
+    rightDownSquareRef.current = null;
+  }, []);
+
+  const onArrowsChange = useCallback(({ arrows }: { arrows: Arrow[] }) => {
+    if (arrows.length === 0) {
+      setHighlightedSquares(new Set());
+    }
+  }, []);
+
+  const displaySquareStyles = useMemo(() => {
+    if (browseIdx !== null) return {};
+    if (highlightedSquares.size === 0) return squareStyles;
+    const merged = { ...squareStyles };
+    for (const sq of highlightedSquares) {
+      // Don't overwrite selection/legal-move styles — layer the highlight underneath
+      if (!merged[sq]) {
+        merged[sq] = { backgroundColor: "rgba(235, 97, 80, 0.6)" };
+      }
+    }
+    return merged;
+  }, [browseIdx, squareStyles, highlightedSquares]);
 
   const onSquareMouseDown = useCallback(
     ({ piece, square }: SquareHandlerArgs, e: React.MouseEvent) => {
@@ -588,6 +621,7 @@ export default function PlayPage() {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
         selectedSquareRef.current = null;
+        rightDownSquareRef.current = square;
         return;
       }
       if (gameState !== "playing") {
@@ -931,6 +965,8 @@ export default function PlayPage() {
             onPieceDrop={onPieceDrop}
             onSquareMouseDown={onSquareMouseDown}
             onSquareClick={onSquareClick}
+            onSquareMouseUp={onSquareMouseUp}
+            onArrowsChange={onArrowsChange}
             boardOrientation={boardOrientation}
             allowDragging={gameState === "playing"}
             arrows={displayArrows}
