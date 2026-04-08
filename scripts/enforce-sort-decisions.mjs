@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Removes positions marked as "delete" in sort-decisions.json from the
- * per-category TypeScript source files in src/lib/positions/.
+ * Enforces sort decisions from sort-decisions.json on the per-category
+ * TypeScript source files in src/lib/positions/:
+ *
+ *   - "delete" → removes the position from its file
+ *   - "keep"   → sets markedKeeper: true on the position
  *
  * Usage:
- *   node scripts/remove-deleted.mjs                    # reads ./sort-decisions.json
- *   node scripts/remove-deleted.mjs path/to/file.json  # reads a custom path
- *
- * After running, the deleted positions are gone from the source files.
- * Positions marked "keep" (or not in the file at all) remain untouched.
+ *   node scripts/enforce-sort-decisions.mjs                    # reads ./sort-decisions.json
+ *   node scripts/enforce-sort-decisions.mjs path/to/file.json  # reads a custom path
  */
 
 import { readFileSync, writeFileSync } from "fs";
@@ -56,8 +56,8 @@ const toKeep = new Set(
 process.stderr.write(`Loaded ${Object.keys(decisions).length} decisions from ${decisionsPath}\n`);
 process.stderr.write(`  ${toKeep.size} keep, ${toDelete.size} delete\n\n`);
 
-if (toDelete.size === 0) {
-  process.stderr.write("Nothing to delete. Exiting.\n");
+if (toDelete.size === 0 && toKeep.size === 0) {
+  process.stderr.write("No decisions to enforce. Exiting.\n");
   process.exit(0);
 }
 
@@ -65,6 +65,7 @@ if (toDelete.size === 0) {
 
 let totalBefore = 0;
 let totalAfter = 0;
+let totalMarked = 0;
 
 for (const cat of CATEGORIES) {
   const filePath = join(POSITIONS_DIR, `${cat}.ts`);
@@ -104,22 +105,49 @@ for (const cat of CATEGORIES) {
   const before = positionLines.length;
   totalBefore += before;
 
-  // Filter out deleted positions
-  const kept = positionLines.filter((line) => {
-    const match = line.match(/id:\s*"([^"]+)"/);
-    if (!match) return true; // keep lines we can't parse
-    return !toDelete.has(match[1]);
-  });
+  let markedInFile = 0;
 
-  const after = kept.length;
+  // Apply decisions: delete removed, set markedKeeper: true for keepers
+  const processed = positionLines
+    .filter((line) => {
+      const match = line.match(/id:\s*"([^"]+)"/);
+      if (!match) return true; // keep lines we can't parse
+      return !toDelete.has(match[1]);
+    })
+    .map((line) => {
+      const match = line.match(/id:\s*"([^"]+)"/);
+      if (!match) return line;
+      const id = match[1];
+      if (!toKeep.has(id)) return line;
+
+      // Set markedKeeper: true
+      let updated;
+      if (/markedKeeper:\s*(true|false)/.test(line)) {
+        updated = line.replace(/markedKeeper:\s*(true|false)/, "markedKeeper: true");
+      } else {
+        // Field missing — insert before closing }
+        updated = line.replace(/ \},\s*$/, ", markedKeeper: true },");
+      }
+      if (updated !== line) markedInFile++;
+      return updated;
+    });
+
+  const after = processed.length;
   totalAfter += after;
+  totalMarked += markedInFile;
   const removed = before - after;
 
   // Rewrite file
-  const output = [...header, ...kept, ...footer].join("\n");
+  const output = [...header, ...processed, ...footer].join("\n");
   writeFileSync(filePath, output);
 
-  process.stderr.write(`  ${cat}: ${before} → ${after} (removed ${removed})\n`);
+  const parts = [];
+  if (removed > 0) parts.push(`removed ${removed}`);
+  if (markedInFile > 0) parts.push(`marked ${markedInFile} keeper${markedInFile !== 1 ? "s" : ""}`);
+  const summary = parts.length > 0 ? ` (${parts.join(", ")})` : " (no changes)";
+  process.stderr.write(`  ${cat}: ${before} → ${after}${summary}\n`);
 }
 
-process.stderr.write(`\nDone! ${totalBefore} → ${totalAfter} total (removed ${totalBefore - totalAfter})\n`);
+process.stderr.write(`\nDone!\n`);
+if (toDelete.size > 0) process.stderr.write(`  Positions removed: ${totalBefore - totalAfter}\n`);
+if (toKeep.size > 0) process.stderr.write(`  Positions marked as keeper: ${totalMarked}\n`);

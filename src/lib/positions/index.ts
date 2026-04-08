@@ -17,6 +17,7 @@ export interface CuratedPosition {
   moveNumber: number;
   category: PositionCategory;
   puzzleRating?: number | null;
+  markedKeeper?: boolean;
 }
 
 const CATEGORY_POOLS: Record<PositionCategory, CuratedPosition[]> = {
