@@ -4,10 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 
 interface TimerProps {
   isRunning: boolean;
-  onReset?: () => void;
 }
 
-export function Timer({ isRunning, onReset }: TimerProps) {
+export function Timer({ isRunning }: TimerProps) {
   const [visible, setVisible] = useState(true);
   const [elapsed, setElapsed] = useState(0);
 
@@ -18,16 +17,6 @@ export function Timer({ isRunning, onReset }: TimerProps) {
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
-
-  useEffect(() => {
-    if (onReset) {
-      setElapsed(0);
-    }
-  }, [onReset]);
-
-  const reset = useCallback(() => {
-    setElapsed(0);
-  }, []);
 
   const seconds = Math.floor(elapsed / 1000);
   const minutes = Math.floor(seconds / 60);

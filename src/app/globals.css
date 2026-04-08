@@ -12,6 +12,14 @@
   --color-text-muted: #666666;
   --color-accent: #39ff14;
   --color-accent-hover: #6fff52;
+
+  --color-board-dark: #2e2e2e;
+  --color-board-light: #424242;
+  --color-board-notation-dark: #666666;
+  --color-board-notation-light: #555555;
+  --color-eval-black: #333333;
+  --color-eval-white: #e8e8e8;
+
   --color-score-perfect: #39ff14;
   --color-score-good: #39ff14;
   --color-score-inaccuracy: #ffff00;

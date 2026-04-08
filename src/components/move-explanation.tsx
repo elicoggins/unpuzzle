@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { getScoreColor } from "@/lib/scoring";
+import { CPL_THRESHOLDS, BEST_LINE_MAX_MOVES, THREAT_LINE_MAX_MOVES } from "@/lib/constants";
+import { hadMateAvailable } from "@/lib/chess-utils";
 
 interface MoveExplanationProps {
   centipawnLoss: number;
@@ -69,10 +71,7 @@ function generateExplanation({
   const before = sideToMove === "w" ? evalBefore : -evalBefore;
   const after = sideToMove === "w" ? evalAfterPlayed : -evalAfterPlayed;
 
-  const youHadMate =
-    isMateBefore &&
-    mateInBefore != null &&
-    ((sideToMove === "w" && mateInBefore > 0) || (sideToMove === "b" && mateInBefore < 0));
+  const youHadMate = hadMateAvailable(isMateBefore, mateInBefore, sideToMove);
 
   // Mate special cases
   if (isMateAfterPlayed) {
@@ -88,10 +87,10 @@ function generateExplanation({
   if (centipawnLoss === 0) {
     return "You found the best move in the position.";
   }
-  if (centipawnLoss <= 15) {
+  if (centipawnLoss <= CPL_THRESHOLDS.excellent) {
     return `Strong move. ${bestMoveSan} was marginally more precise.`;
   }
-  if (centipawnLoss <= 50) {
+  if (centipawnLoss <= CPL_THRESHOLDS.good) {
     return `A solid choice. The engine preferred ${bestMoveSan}.`;
   }
 
@@ -99,7 +98,7 @@ function generateExplanation({
   const shift = describeShift(before, after);
   const refFirst = refutationLine[0];
 
-  if (centipawnLoss <= 90) {
+  if (centipawnLoss <= CPL_THRESHOLDS.inaccuracy) {
     if (refFirst) {
       const threat = describeMoveType(refFirst);
       return `${shift} After your move, ${refFirst}${threat} is the key response.`;
@@ -107,7 +106,7 @@ function generateExplanation({
     return `${shift} ${bestMoveSan} was more accurate.`;
   }
 
-  if (centipawnLoss <= 150) {
+  if (centipawnLoss <= CPL_THRESHOLDS.mistake) {
     if (refFirst) {
       const threat = describeMoveType(refFirst);
       return `${shift} Your opponent punishes with ${refFirst}${threat}.`;
@@ -200,7 +199,7 @@ export function MoveExplanation({
                       best
                     </span>
                     <span className="text-xs font-[family-name:var(--font-mono)] text-text-secondary flex gap-x-1.5 overflow-x-auto min-w-0">
-                      {bestLine.slice(0, 6).map((san, i) => (
+                      {bestLine.slice(0, BEST_LINE_MAX_MOVES).map((san, i) => (
                         <span
                           key={i}
                           className={`shrink-0${onBestLineClick ? " cursor-pointer hover:text-accent transition-colors" : ""}`}
@@ -218,7 +217,7 @@ export function MoveExplanation({
                       threat
                     </span>
                     <span className="text-xs font-[family-name:var(--font-mono)] text-text-secondary flex gap-x-1.5 overflow-x-auto min-w-0">
-                      {refutationLine.slice(0, 5).map((san, i) => (
+                      {refutationLine.slice(0, THREAT_LINE_MAX_MOVES).map((san, i) => (
                         <span
                           key={i}
                           className={`shrink-0${onRefutationLineClick ? " cursor-pointer hover:text-accent transition-colors" : ""}`}

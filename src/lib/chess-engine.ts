@@ -1,6 +1,8 @@
 // Stockfish 18 WASM (lite single-threaded) — client-side engine
 // Evaluates positions in a Web Worker, returns eval + bestmove via UCI protocol
 
+import { MATE_EVAL_SENTINEL } from "./constants";
+
 export interface EngineLine {
   /** Centipawn eval from side-to-move's perspective */
   eval: number;
@@ -118,7 +120,7 @@ class StockfishEngine {
         if (mateMatch) {
           lineMateIn = parseInt(mateMatch[1], 10);
           lineIsMate = true;
-          lineEval = lineMateIn > 0 ? 100000 : -100000;
+          lineEval = lineMateIn > 0 ? MATE_EVAL_SENTINEL : -MATE_EVAL_SENTINEL;
         }
       }
 

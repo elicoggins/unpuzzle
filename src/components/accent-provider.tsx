@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 const ACCENT_KEY = "accent-color";
 const FONT_KEY = "heading-font";
+export const ACCENT_CHANGE_EVENT = "accent-change";
+export const FONT_CHANGE_EVENT = "font-change";
 
 function applyAccent(accent: string, accentHover: string) {
   document.documentElement.style.setProperty("--color-accent", accent);
@@ -52,11 +54,11 @@ export function AccentProvider() {
       applyFont(fontVar);
     }
 
-    window.addEventListener("accent-change", handleAccentChange);
-    window.addEventListener("font-change", handleFontChange);
+    window.addEventListener(ACCENT_CHANGE_EVENT, handleAccentChange);
+    window.addEventListener(FONT_CHANGE_EVENT, handleFontChange);
     return () => {
-      window.removeEventListener("accent-change", handleAccentChange);
-      window.removeEventListener("font-change", handleFontChange);
+      window.removeEventListener(ACCENT_CHANGE_EVENT, handleAccentChange);
+      window.removeEventListener(FONT_CHANGE_EVENT, handleFontChange);
     };
   }, []);
 

@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { getScoreLabel, getScoreColor, getScoreGlyph, computeMoveAccuracy } from "@/lib/scoring";
+import { hadMateAvailable } from "@/lib/chess-utils";
 
 interface ScoreRevealProps {
   centipawnLoss: number;
@@ -18,7 +19,6 @@ interface ScoreRevealProps {
 
 export function ScoreReveal({
   centipawnLoss,
-  bestMoveSan,
   category,
   evalAfterBest,
   evalAfterPlayed,
@@ -29,8 +29,7 @@ export function ScoreReveal({
   show,
 }: ScoreRevealProps) {
   // Detect mate scenarios
-  const youHadMate = isMateBefore && mateInBefore != null &&
-    ((sideToMove === "w" && mateInBefore > 0) || (sideToMove === "b" && mateInBefore < 0));
+  const youHadMate = hadMateAvailable(isMateBefore, mateInBefore, sideToMove);
   const youBlunderedMate = isMateAfterPlayed;
   const youFoundMate = youHadMate && centipawnLoss === 0;
 

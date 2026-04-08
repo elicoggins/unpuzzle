@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Chess } from "chess.js";
 import type { EngineLine } from "@/lib/chess-engine";
+import { ENGINE_LINE_MAX_MOVES } from "@/lib/constants";
 
 interface EngineLinesProps {
   /** Current position FEN (for converting UCI to SAN) */
@@ -94,7 +95,7 @@ export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: Eng
               </span>
               <span className="text-xs font-[family-name:var(--font-mono)] text-text-secondary flex gap-x-1.5 overflow-hidden min-w-0">
                 {line.sanMoves.length > 0
-                  ? line.sanMoves.slice(0, 8).map((san, j) => (
+                  ? line.sanMoves.slice(0, ENGINE_LINE_MAX_MOVES).map((san, j) => (
                       <span
                         key={j}
                         className={`shrink-0${onMoveClick ? " cursor-pointer hover:text-accent transition-colors" : ""}`}

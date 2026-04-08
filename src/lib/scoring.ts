@@ -1,36 +1,19 @@
+import { getScoreTier, WIN_PROBABILITY_COEFFICIENT } from "./constants";
+
 export function getScoreLabel(centipawnLoss: number): string {
-  if (centipawnLoss === 0) return "Perfect";
-  if (centipawnLoss <= 15) return "Excellent";
-  if (centipawnLoss <= 50) return "Good";
-  if (centipawnLoss <= 90) return "Inaccuracy";
-  if (centipawnLoss <= 150) return "Mistake";
-  return "Blunder";
+  return getScoreTier(centipawnLoss).label;
 }
 
 export function getScoreGlyph(centipawnLoss: number): string {
-  if (centipawnLoss === 0) return "!!";
-  if (centipawnLoss <= 15) return "!";
-  if (centipawnLoss <= 50) return "";
-  if (centipawnLoss <= 90) return "?!";
-  if (centipawnLoss <= 150) return "?";
-  return "??";
+  return getScoreTier(centipawnLoss).glyph;
 }
 
 export function getScoreColor(centipawnLoss: number): string {
-  if (centipawnLoss === 0) return "var(--color-score-perfect)";
-  if (centipawnLoss <= 15) return "var(--color-score-perfect)";
-  if (centipawnLoss <= 50) return "var(--color-score-good)";
-  if (centipawnLoss <= 90) return "var(--color-score-inaccuracy)";
-  if (centipawnLoss <= 150) return "var(--color-score-mistake)";
-  return "var(--color-score-blunder)";
+  return getScoreTier(centipawnLoss).color;
 }
 
 export function getScoreArrowColor(centipawnLoss: number): string {
-  if (centipawnLoss <= 15) return "rgba(57, 255, 20, 0.75)";    // neon green
-  if (centipawnLoss <= 50) return "rgba(57, 255, 20, 0.55)";    // neon green (softer)
-  if (centipawnLoss <= 90) return "rgba(255, 255, 0, 0.7)";     // neon yellow
-  if (centipawnLoss <= 150) return "rgba(255, 102, 0, 0.7)";    // neon orange
-  return "rgba(255, 0, 64, 0.75)";                               // neon red
+  return getScoreTier(centipawnLoss).arrowColor;
 }
 
 export function computeACPL(losses: number[]): number {
@@ -56,7 +39,7 @@ export function computeCentipawnLoss(
 
 /** Maps centipawns (white perspective) to win probability 0–100. */
 function cpToWinPercent(cp: number): number {
-  return 100 / (1 + Math.exp(-0.00368208 * cp));
+  return 100 / (1 + Math.exp(-WIN_PROBABILITY_COEFFICIENT * cp));
 }
 
 /**

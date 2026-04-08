@@ -1,4 +1,5 @@
 import type { Position, PositionCategory } from "../types";
+import { CATEGORY_WEIGHTS } from "../constants";
 // Position is used by getRandomPosition return type
 import { TACTICAL_POSITIONS } from "./tactical";
 import { BALANCED_POSITIONS } from "./balanced";
@@ -28,15 +29,11 @@ const CATEGORY_POOLS: Record<PositionCategory, CuratedPosition[]> = {
   endgame: ENDGAME_POSITIONS,
 };
 
-const WEIGHTS: Record<PositionCategory, number> = {
-  tactical: 0.10, balanced: 0.30, critical: 0.25, tricky: 0.10, endgame: 0.25,
-};
-
 export function getWeightedRandomPosition(): CuratedPosition {
   const roll = Math.random();
   let cum = 0;
   let cat: PositionCategory = "balanced";
-  for (const [c, w] of Object.entries(WEIGHTS) as [PositionCategory, number][]) {
+  for (const [c, w] of Object.entries(CATEGORY_WEIGHTS) as [PositionCategory, number][]) {
     cum += w; if (roll < cum) { cat = c; break; }
   }
   const pool = CATEGORY_POOLS[cat];

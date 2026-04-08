@@ -66,16 +66,16 @@ export function ChessBoard({
             borderRadius: "0",
           },
           darkSquareStyle: {
-            backgroundColor: "#2e2e2e",
+            backgroundColor: "var(--color-board-dark)",
           },
           lightSquareStyle: {
-            backgroundColor: "#424242",
+            backgroundColor: "var(--color-board-light)",
           },
           darkSquareNotationStyle: {
-            color: "#666666",
+            color: "var(--color-board-notation-dark)",
           },
           lightSquareNotationStyle: {
-            color: "#555555",
+            color: "var(--color-board-notation-light)",
           },
           dropSquareStyle: {},
           draggingPieceStyle: {

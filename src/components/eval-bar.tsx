@@ -1,5 +1,7 @@
 "use client";
 
+import { EVAL_BAR_WIDTH } from "@/lib/constants";
+
 interface EvalBarProps {
   /** Centipawn eval from white's perspective */
   eval: number;
@@ -57,14 +59,14 @@ export function EvalBar({ eval: cp, isMate, mateIn, height, orientation, reveale
   return (
     <div
       className="relative flex-shrink-0 rounded overflow-hidden"
-      style={{ width: 28, height }}
+      style={{ width: EVAL_BAR_WIDTH, height }}
     >
       {/* Dark background (entire bar) */}
-      <div className="absolute inset-0 bg-[#333333]" />
+      <div className="absolute inset-0 bg-[var(--color-eval-black)]" />
 
       {/* White fill from the white side of the board */}
       <div
-        className={`absolute ${fillFromTop ? "top-0" : "bottom-0"} left-0 right-0 bg-[#e8e8e8] transition-all duration-500 ease-out`}
+        className={`absolute ${fillFromTop ? "top-0" : "bottom-0"} left-0 right-0 bg-[var(--color-eval-white)] transition-all duration-500 ease-out`}
         style={{ height: `${whitePercent}%` }}
       />
 
@@ -72,7 +74,7 @@ export function EvalBar({ eval: cp, isMate, mateIn, height, orientation, reveale
       <div
         className={`absolute left-0 right-0 flex items-center justify-center text-[10px] font-bold font-[family-name:var(--font-mono)] select-none h-5 ${
           showLabelOnBottom ? "bottom-0" : "top-0"
-        } ${labelInWhiteZone ? "text-[#333333]" : "text-[#e8e8e8]"}`}
+        } ${labelInWhiteZone ? "text-[var(--color-eval-black)]" : "text-[var(--color-eval-white)]"}`}
       >
         {label}
       </div>
