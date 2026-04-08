@@ -18,6 +18,8 @@ interface ChessBoardProps {
   onPieceDrop?: (args: PieceDropHandlerArgs) => boolean;
   onSquareMouseDown?: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
   onSquareClick?: (args: SquareHandlerArgs) => void;
+  onSquareMouseUp?: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
+  onArrowsChange?: (args: { arrows: Arrow[] }) => void;
   boardOrientation?: "white" | "black";
   allowDragging?: boolean;
   animationDurationInMs?: number;
@@ -31,6 +33,8 @@ export function ChessBoard({
   onPieceDrop,
   onSquareMouseDown,
   onSquareClick,
+  onSquareMouseUp,
+  onArrowsChange,
   boardOrientation = "white",
   allowDragging = true,
   animationDurationInMs = 200,
@@ -48,6 +52,8 @@ export function ChessBoard({
           onPieceDrop,
           onSquareMouseDown,
           onSquareClick,
+          onSquareMouseUp,
+          onArrowsChange,
           boardOrientation,
           allowDragging,
           animationDurationInMs,

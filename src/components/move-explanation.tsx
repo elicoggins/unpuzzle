@@ -203,7 +203,7 @@ export function MoveExplanation({
                       {bestLine.slice(0, 6).map((san, i) => (
                         <span
                           key={i}
-                          className={`shrink-0${onBestLineClick ? " cursor-pointer hover:text-text-primary transition-colors" : ""}`}
+                          className={`shrink-0${onBestLineClick ? " cursor-pointer hover:text-accent transition-colors" : ""}`}
                           onClick={() => onBestLineClick?.(i)}
                         >
                           {san}
@@ -221,7 +221,7 @@ export function MoveExplanation({
                       {refutationLine.slice(0, 5).map((san, i) => (
                         <span
                           key={i}
-                          className={`shrink-0${onRefutationLineClick ? " cursor-pointer hover:text-text-primary transition-colors" : ""}`}
+                          className={`shrink-0${onRefutationLineClick ? " cursor-pointer hover:text-accent transition-colors" : ""}`}
                           onClick={() => onRefutationLineClick?.(i)}
                         >
                           {san}

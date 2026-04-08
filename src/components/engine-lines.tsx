@@ -97,7 +97,7 @@ export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: Eng
                   ? line.sanMoves.slice(0, 8).map((san, j) => (
                       <span
                         key={j}
-                        className={`shrink-0${onMoveClick ? " cursor-pointer hover:text-text-primary transition-colors" : ""}`}
+                        className={`shrink-0${onMoveClick ? " cursor-pointer hover:text-accent transition-colors" : ""}`}
                         onClick={() => onMoveClick?.(i, j)}
                       >
                         {san}

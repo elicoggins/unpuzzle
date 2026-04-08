@@ -11,13 +11,28 @@ import { MoveExplanation } from "@/components/move-explanation";
 import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@/lib/chess-engine";
 import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
-import { getRandomPosition } from "@/lib/positions";
+import { getUnsortedPosition, getAllPositions, getPositionCounts } from "@/lib/positions";
 import { playMoveSound, playCaptureSound, playGoodSound, playBadSound } from "@/lib/sounds";
 import { loadDepth } from "@/app/settings/page";
 import type { Position, EvalFeedback } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
 type GameState = "loading" | "playing" | "confirming" | "evaluating" | "scored";
+
+const SORT_STORAGE_KEY = "sort-decisions";
+const SORT_SECRET = process.env.NEXT_PUBLIC_SORT_SECRET ?? "";
+
+function loadDecisions(): Record<string, "keep" | "delete"> {
+  try {
+    const raw = localStorage.getItem(SORT_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {};
+}
+
+function saveDecisions(d: Record<string, "keep" | "delete">) {
+  localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(d));
+}
 
 /** Convert a UCI PV to SAN moves, starting from a given FEN. */
 function uciPvToSan(fen: string, uciMoves: string[]): string[] {
@@ -43,21 +58,27 @@ function computeMaxBoardSize(): number {
   const navHeight = 57;
   const isMobile = window.innerWidth < 768;
   if (isMobile) {
-    // eval bar 28 + gap 4 + padding 32
     const maxWidth = window.innerWidth - 64;
-    // Reserve space for nav, mobile info bar, padding, and bottom panel
     const maxHeight = window.innerHeight - navHeight - 260;
     return Math.max(200, Math.min(maxHeight, maxWidth));
   }
   const padding = 72;
   const maxHeight = window.innerHeight - navHeight - padding;
-  // Left panel 220 + right panel 260 + eval bar 28 + gaps (4 * 16)
   const horizontalChrome = 220 + 260 + 28 + 64;
   const maxWidth = window.innerWidth - horizontalChrome;
   return Math.max(280, Math.min(maxHeight, maxWidth));
 }
 
-export default function PlayPage() {
+export default function SortPage() {
+  // ── Auth gate ──
+  const [authed, setAuthed] = useState(false);
+  const [authInput, setAuthInput] = useState("");
+  const [authError, setAuthError] = useState(false);
+
+  // ── Sort decisions ──
+  const [decisions, setDecisions] = useState<Record<string, "keep" | "delete">>({});
+
+  // ── Game state (mirrors PlayPage) ──
   const [position, setPosition] = useState<Position | null>(null);
   const [gameState, setGameState] = useState<GameState>("loading");
   const [fen, setFen] = useState<string>("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -66,8 +87,6 @@ export default function PlayPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [sessionScores, setSessionScores] = useState<number[]>([]);
-  const [sessionTimes, setSessionTimes] = useState<number[]>([]);
   const [boardSize, setBoardSize] = useState(400);
   const [engineDepth, setEngineDepth] = useState<DepthUpdate | null>(null);
   const [engineReady, setEngineReady] = useState(false);
@@ -79,30 +98,35 @@ export default function PlayPage() {
   const [browseIdx, setBrowseIdx] = useState<number | null>(null);
   const [legalMoveSquares, setLegalMoveSquares] = useState<string[]>([]);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [highlightedSquares, setHighlightedSquares] = useState<Set<string>>(new Set());
   const selectedSquareRef = useRef<string | null>(null);
   const wasAlreadySelectedRef = useRef(false);
   const gameRef = useRef<Chess>(new Chess());
   const startTimeRef = useRef<number>(0);
   const resizingRef = useRef(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
+  const [allDone, setAllDone] = useState(false);
+
+  // ── Stats ──
+  const totalPositions = useMemo(() => getAllPositions().length, []);
+  const keptCount = useMemo(() => Object.values(decisions).filter((v) => v === "keep").length, [decisions]);
+  const deletedCount = useMemo(() => Object.values(decisions).filter((v) => v === "delete").length, [decisions]);
+  const remaining = totalPositions - keptCount - deletedCount;
+
+  // ── Auth check ──
+  useEffect(() => {
+    if (!SORT_SECRET) return; // no secret configured — stays locked
+  }, []);
 
   // Initialize engine on mount
   useEffect(() => {
+    if (!authed) return;
     const engine = getEngine();
     engine.init().then(() => setEngineReady(true));
-  }, []);
+  }, [authed]);
 
-  // Load session data from localStorage on mount
+  // Load decisions from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("session-scores");
-      if (stored) setSessionScores(JSON.parse(stored));
-    } catch {}
-    try {
-      const stored = localStorage.getItem("session-times");
-      if (stored) setSessionTimes(JSON.parse(stored));
-    } catch {}
+    setDecisions(loadDecisions());
   }, []);
 
   // Set initial board size on mount and recalculate on window resize
@@ -111,7 +135,6 @@ export default function PlayPage() {
     function handleResize() {
       const isMobile = window.innerWidth < 768;
       if (isMobile) {
-        // On mobile, always fill available space
         setBoardSize(computeMaxBoardSize());
       } else {
         setBoardSize((prev) => {
@@ -125,6 +148,9 @@ export default function PlayPage() {
   }, []);
 
   const loadPosition = useCallback(() => {
+    const currentDecisions = loadDecisions();
+    setDecisions(currentDecisions);
+
     setGameState("loading");
     setFeedback(null);
     setMoveHistory([]);
@@ -137,11 +163,17 @@ export default function PlayPage() {
     setLegalMoveSquares([]);
     setSelectedSquare(null);
     selectedSquareRef.current = null;
-    setHighlightedSquares(new Set());
     setTimerKey((k) => k + 1);
 
-    const data = getRandomPosition();
+    const data = getUnsortedPosition(currentDecisions);
 
+    if (!data) {
+      setAllDone(true);
+      setGameState("loading");
+      return;
+    }
+
+    setAllDone(false);
     setPosition(data);
 
     const game = new Chess(data.fen);
@@ -203,20 +235,16 @@ export default function PlayPage() {
       const originalFen = position.fen;
       const sideToMove = position.sideToMove;
 
-      // 1. Evaluate the original position with MultiPV for engine lines display
       const evalBefore: EvalResult = await evaluateWithFallback(originalFen, loadDepth(), (update) => {
         setEngineDepth(update);
-        // Update eval bar with live eval (convert from side-to-move to white's perspective)
         const whiteEval = sideToMove === "w" ? update.eval : -update.eval;
         const whiteMate = sideToMove === "w" ? update.mateIn : (update.mateIn != null ? -update.mateIn : null);
         setEvalForBar({ eval: whiteEval, isMate: update.isMate, mateIn: whiteMate });
         setEngineLines(update.lines);
       }, 3);
 
-      // Store final engine lines from the pre-move evaluation
       setEngineLines(evalBefore.lines);
 
-      // 2. Get the best move in SAN and full best continuation
       const tmpGame = new Chess(originalFen);
       let bestMoveSan = evalBefore.bestMove || "—";
       const bestLineUci = evalBefore.pv.slice(0, 8);
@@ -229,13 +257,10 @@ export default function PlayPage() {
             promotion: evalBefore.bestMove.length > 4 ? evalBefore.bestMove[4] : undefined,
           });
           if (bestMoveResult) bestMoveSan = bestMoveResult.san;
-        } catch {
-          // fallback to UCI notation
-        }
+        } catch {}
         bestLine = uciPvToSan(originalFen, bestLineUci);
       }
 
-      // 3. Apply the user's move to get the resulting FEN
       const afterGame = new Chess(originalFen);
       afterGame.move({
         from: uciMove.slice(0, 2),
@@ -244,21 +269,16 @@ export default function PlayPage() {
       });
       const afterFen = afterGame.fen();
 
-      // 4. Evaluate the position after the user's move (single PV, no live updates needed)
       setEngineDepth(null);
       const evalAfter: EvalResult = await evaluateWithFallback(afterFen, loadDepth(), (update) => {
         setEngineDepth(update);
       });
 
-      // Save refutation line (opponent's best response after the played move)
       const refutationLineUci = evalAfter.pv.slice(0, 6);
       const refutationLine = uciPvToSan(afterFen, refutationLineUci);
 
-      // 5. Compute post-move eval from original side's perspective
       const evalAfterFromOrigPerspective = -evalAfter.eval;
 
-      // 6. Evaluate position after the best move (for accurate CPL reference)
-      // Default: user played best move → reference = their result → CPL = 0
       let evalAfterBestCp = evalAfterFromOrigPerspective;
       if (evalBefore.bestMove && evalBefore.bestMove.length >= 4 && evalBefore.bestMove !== uciMove) {
         const bestGame = new Chess(originalFen);
@@ -269,21 +289,16 @@ export default function PlayPage() {
         });
         const bestFen = bestGame.fen();
         const evalAfterBestResult = await evaluateWithFallback(bestFen, loadDepth());
-        // Negate because perspective flips after a move
         evalAfterBestCp = -evalAfterBestResult.eval;
       }
 
-      // 7. CPL = best achievable outcome minus actual outcome (both from original STM perspective)
       const centipawnLoss = Math.max(0, evalAfterBestCp - evalAfterFromOrigPerspective);
 
-      // Update eval bar to reflect post-move position
       const postMoveWhiteEval = sideToMove === "w" ? evalAfterFromOrigPerspective : -evalAfterFromOrigPerspective;
       setEvalForBar({ eval: postMoveWhiteEval, isMate: evalAfter.isMate, mateIn: evalAfter.mateIn != null ? -evalAfter.mateIn : null });
 
-      // Convert to white's perspective for display (+ = white winning, − = black winning)
       const toWhite = (cp: number) => sideToMove === "w" ? cp : -cp;
       const mateInBeforeWhite = evalBefore.mateIn != null && sideToMove === "b" ? -evalBefore.mateIn : evalBefore.mateIn;
-      // evalAfter STM is opponent of user. mateIn from opponent's STM perspective → white's perspective:
       const mateInAfterWhite = evalAfter.mateIn != null
         ? (sideToMove === "w" ? -evalAfter.mateIn : evalAfter.mateIn)
         : null;
@@ -307,7 +322,6 @@ export default function PlayPage() {
 
       setFeedback(result);
 
-      // Feedback sound: perfect (0 CPL / found mate), good (≤50 CPL), bad otherwise
       const isMateBefore = evalBefore.isMate;
       const youHadMate = isMateBefore && evalBefore.mateIn != null &&
         ((sideToMove === "w" && evalBefore.mateIn > 0) || (sideToMove === "b" && evalBefore.mateIn < 0));
@@ -317,18 +331,6 @@ export default function PlayPage() {
       } else {
         playBadSound();
       }
-      setSessionScores((prev) => {
-        // Cap at 300cp for ACPL purposes — mate scores (~100000) would otherwise destroy the average
-        const next = [...prev, Math.min(centipawnLoss, 300)];
-        try { localStorage.setItem("session-scores", JSON.stringify(next)); } catch {}
-        return next;
-      });
-      setSessionTimes((prev) => {
-        const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
-        const next = [...prev, elapsed];
-        try { localStorage.setItem("session-times", JSON.stringify(next)); } catch {}
-        return next;
-      });
       setGameState("scored");
       setEngineDepth(null);
     },
@@ -339,7 +341,6 @@ export default function PlayPage() {
     ({ sourceSquare, targetSquare, piece }: PieceDropHandlerArgs): boolean => {
       if (gameState !== "playing") return false;
 
-      // Dropped on same square — deselect if it was already selected before this drag
       if (sourceSquare === targetSquare || !targetSquare) {
         if (wasAlreadySelectedRef.current) {
           setLegalMoveSquares([]);
@@ -403,6 +404,40 @@ export default function PlayPage() {
     setGameState("playing");
   }, [position]);
 
+  // ── Sort actions ──
+  const handleKeep = useCallback(() => {
+    if (!position) return;
+    const next = { ...loadDecisions(), [position.id]: "keep" as const };
+    saveDecisions(next);
+    setDecisions(next);
+    loadPosition();
+  }, [position, loadPosition]);
+
+  const handleDelete = useCallback(() => {
+    if (!position) return;
+    const next = { ...loadDecisions(), [position.id]: "delete" as const };
+    saveDecisions(next);
+    setDecisions(next);
+    loadPosition();
+  }, [position, loadPosition]);
+
+  const handleExport = useCallback(() => {
+    const blob = new Blob([JSON.stringify(loadDecisions(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sort-decisions.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleClear = useCallback(() => {
+    if (!confirm("Clear all sort decisions? This cannot be undone.")) return;
+    localStorage.removeItem(SORT_STORAGE_KEY);
+    setDecisions({});
+    loadPosition();
+  }, [loadPosition]);
+
   const onEngineLineMoveClick = useCallback(
     (lineIdx: number, moveIdx: number) => {
       if (!position || !engineLines[lineIdx] || gameState !== "scored") return;
@@ -430,7 +465,6 @@ export default function PlayPage() {
     [position, engineLines, gameState]
   );
 
-  /** Browse the best continuation on the board */
   const onBestLineClick = useCallback(
     (moveIdx: number) => {
       if (!position || !feedback || gameState !== "scored") return;
@@ -458,11 +492,9 @@ export default function PlayPage() {
     [position, feedback, gameState]
   );
 
-  /** Browse the refutation line (starts from user's played move) */
   const onRefutationLineClick = useCallback(
     (moveIdx: number) => {
       if (!position || !feedback || !lastPlayedUci || gameState !== "scored") return;
-      // Start from the position after the user's move
       const afterGame = new Chess(position.fen);
       const userMove = afterGame.move({
         from: lastPlayedUci.slice(0, 2),
@@ -470,7 +502,6 @@ export default function PlayPage() {
         promotion: lastPlayedUci.length > 4 ? lastPlayedUci[4] : undefined,
       });
       if (!userMove) return;
-      // First entry is the user's move
       const path: { san: string; fen: string }[] = [{ san: userMove.san, fen: afterGame.fen() }];
       const uciMoves = feedback.refutationLineUci;
       for (let i = 0; i <= moveIdx && i < uciMoves.length; i++) {
@@ -494,26 +525,11 @@ export default function PlayPage() {
     [position, feedback, lastPlayedUci, gameState]
   );
 
-  const sessionACPL =
-    sessionScores.length > 0
-      ? Math.round(
-          sessionScores.reduce((a, b) => a + b, 0) / sessionScores.length
-        )
-      : null;
-
-  const avgTime =
-    sessionTimes.length > 0
-      ? Math.round(sessionTimes.reduce((a, b) => a + b, 0) / sessionTimes.length)
-      : null;
-
   const puzzleMoveNumber = position?.moveNumber ?? 1;
 
-  // Compute board arrows for scored state
   const boardArrows = useMemo<Arrow[]>(() => {
     if (gameState !== "scored" || !feedback || !lastPlayedUci) return [];
     const arrows: Arrow[] = [];
-
-    // Best move arrow (green) — show if different from played
     if (feedback.bestMoveUci && feedback.bestMoveUci.length >= 4 && feedback.bestMoveUci !== lastPlayedUci) {
       arrows.push({
         startSquare: feedback.bestMoveUci.slice(0, 2),
@@ -521,8 +537,6 @@ export default function PlayPage() {
         color: "rgba(57, 255, 20, 0.75)",
       });
     }
-
-    // Player's move arrow (color-coded by quality)
     if (lastPlayedUci.length >= 4) {
       arrows.push({
         startSquare: lastPlayedUci.slice(0, 2),
@@ -530,15 +544,11 @@ export default function PlayPage() {
         color: getScoreArrowColor(feedback.centipawnLoss),
       });
     }
-
     return arrows;
   }, [gameState, feedback, lastPlayedUci]);
 
-  // Compute square highlight for the destination of the player's move
   const squareStyles = useMemo<Record<string, React.CSSProperties>>(() => {
     const styles: Record<string, React.CSSProperties> = {};
-
-    // Legal move dots (empty squares) and capture rings (occupied squares)
     for (const sq of legalMoveSquares) {
       const hasPiece = !!gameRef.current.get(sq as any);
       styles[sq] = hasPiece
@@ -553,15 +563,11 @@ export default function PlayPage() {
             cursor: "pointer",
           };
     }
-
-    // Selected square highlight
     if (selectedSquare) {
       styles[selectedSquare] = {
         backgroundColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)",
       };
     }
-
-    // Scored state: highlight played move destination
     if (gameState === "scored" && feedback && lastPlayedUci && lastPlayedUci.length >= 4) {
       const targetSquare = lastPlayedUci.slice(2, 4);
       styles[targetSquare] = {
@@ -569,7 +575,6 @@ export default function PlayPage() {
         borderRadius: "50%",
       };
     }
-
     return styles;
   }, [legalMoveSquares, selectedSquare, gameState, feedback, lastPlayedUci]);
 
@@ -580,48 +585,14 @@ export default function PlayPage() {
   }, [browseIdx, browsePath, fen, position]);
 
   const displayArrows = useMemo(() => browseIdx !== null ? [] : boardArrows, [browseIdx, boardArrows]);
-
-  const rightDownSquareRef = useRef<string | null>(null);
-
-  const onSquareMouseUp = useCallback(({ square }: SquareHandlerArgs, e: React.MouseEvent) => {
-    if (e.button !== 2) return;
-    if (rightDownSquareRef.current === square) {
-      setHighlightedSquares((prev) => {
-        const next = new Set(prev);
-        if (next.has(square)) { next.delete(square); } else { next.add(square); }
-        return next;
-      });
-    }
-    rightDownSquareRef.current = null;
-  }, []);
-
-  const onArrowsChange = useCallback(({ arrows }: { arrows: Arrow[] }) => {
-    if (arrows.length === 0) {
-      setHighlightedSquares(new Set());
-    }
-  }, []);
-
-  const displaySquareStyles = useMemo(() => {
-    if (browseIdx !== null) return {};
-    if (highlightedSquares.size === 0) return squareStyles;
-    const merged = { ...squareStyles };
-    for (const sq of highlightedSquares) {
-      // Don't overwrite selection/legal-move styles — layer the highlight underneath
-      if (!merged[sq]) {
-        merged[sq] = { backgroundColor: "rgba(235, 97, 80, 0.6)" };
-      }
-    }
-    return merged;
-  }, [browseIdx, squareStyles, highlightedSquares]);
+  const displaySquareStyles = useMemo(() => browseIdx !== null ? {} : squareStyles, [browseIdx, squareStyles]);
 
   const onSquareMouseDown = useCallback(
     ({ piece, square }: SquareHandlerArgs, e: React.MouseEvent) => {
-      // Right-click = drawing an arrow — hide move hints for the duration
       if (e.button === 2) {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
         selectedSquareRef.current = null;
-        rightDownSquareRef.current = square;
         return;
       }
       if (gameState !== "playing") {
@@ -631,11 +602,8 @@ export default function PlayPage() {
         wasAlreadySelectedRef.current = false;
         return;
       }
-      // If a piece is already selected and this square is a legal destination:
       if (selectedSquareRef.current && legalMoveSquares.includes(square)) {
         if (piece) {
-          // Capture square: dnd-kit's drag (dragActivationDistance=0) will eat the
-          // subsequent click event, so execute the capture here on mousedown.
           const from = selectedSquareRef.current;
           const game = gameRef.current;
           try {
@@ -646,21 +614,17 @@ export default function PlayPage() {
               setMoveHistory((prev) => [...prev, moveResult.san]);
               setLegalMoveSquares([]);
               setSelectedSquare(null);
-              selectedSquareRef.current = null; // cleared sync so onSquareClick won't double-fire
+              selectedSquareRef.current = null;
               const uciMove = from + square + (moveResult.promotion || "");
               setPendingMove({ uci: uciMove, san: moveResult.san });
               setGameState("confirming");
             }
-          } catch {
-            // not a legal move — fall through
-          }
+          } catch {}
           return;
         }
-        // Empty destination square: let onSquareClick handle it
         wasAlreadySelectedRef.current = false;
         return;
       }
-      // Track if this piece was already selected before this mousedown
       wasAlreadySelectedRef.current = selectedSquareRef.current === square;
       const game = gameRef.current;
       const moves = game.moves({ square: square as any, verbose: true });
@@ -682,8 +646,6 @@ export default function PlayPage() {
     ({ square }: SquareHandlerArgs) => {
       if (gameState !== "playing") return;
       const game = gameRef.current;
-
-      // If a piece is already selected and this square is a legal destination, move there
       if (selectedSquareRef.current && legalMoveSquares.includes(square)) {
         const from = selectedSquareRef.current;
         try {
@@ -699,12 +661,9 @@ export default function PlayPage() {
             setPendingMove({ uci: uciMove, san: moveResult.san });
             setGameState("confirming");
           }
-        } catch {
-          // not a legal move, fall through to selection logic
-        }
+        } catch {}
         return;
       }
-
       const moves = game.moves({ square: square as any, verbose: true });
       if (moves.length === 0) {
         setLegalMoveSquares([]);
@@ -714,6 +673,76 @@ export default function PlayPage() {
     },
     [gameState, legalMoveSquares]
   );
+
+  // ── Auth gate render ──
+  if (!SORT_SECRET) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-text-muted text-sm">Sort mode is not available in this build.</div>
+      </div>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (authInput === SORT_SECRET) {
+              setAuthed(true);
+              setAuthError(false);
+            } else {
+              setAuthError(true);
+            }
+          }}
+          className="flex flex-col items-center gap-3"
+        >
+          <label className="text-sm text-text-secondary">Enter sort password</label>
+          <input
+            type="password"
+            value={authInput}
+            onChange={(e) => setAuthInput(e.target.value)}
+            className="px-4 py-2 bg-bg-secondary border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent"
+            autoFocus
+          />
+          {authError && <span className="text-xs text-red-400">Wrong password</span>}
+          <button
+            type="submit"
+            className="px-6 py-2 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
+          >
+            unlock
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // ── All sorted render ──
+  if (allDone) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <div className="text-xl font-bold font-[family-name:var(--font-heading)] text-accent">All positions sorted!</div>
+        <div className="text-sm text-text-muted">
+          {totalPositions} total · {keptCount} kept · {deletedCount} deleted
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExport}
+            className="px-6 py-2 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
+          >
+            export
+          </button>
+          <button
+            onClick={handleClear}
+            className="px-6 py-2 text-sm font-bold uppercase tracking-widest border-2 border-red-500/60 text-red-400 hover:bg-red-500/20 rounded-lg transition-all duration-200 cursor-pointer"
+          >
+            clear all
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col md:flex-row items-center md:items-start justify-start md:justify-center p-4 pt-2 md:pt-4 gap-4">
@@ -739,6 +768,42 @@ export default function PlayPage() {
         className="hidden md:flex flex-col gap-3"
         style={{ width: 220, height: boardSize }}
       >
+        {/* Sort stats */}
+        <div className="border border-border rounded-lg p-4 space-y-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted">
+            sort progress
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-text-muted">total</span>
+            <span className="font-[family-name:var(--font-mono)] text-text-secondary">{totalPositions}</span>
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-text-muted">remaining</span>
+            <span className="font-[family-name:var(--font-mono)] text-text-secondary">{remaining}</span>
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-green-400">kept</span>
+            <span className="font-[family-name:var(--font-mono)] text-green-400">{keptCount}</span>
+          </div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-xs text-red-400">deleted</span>
+            <span className="font-[family-name:var(--font-mono)] text-red-400">{deletedCount}</span>
+          </div>
+          {/* Progress bar */}
+          <div className="w-full bg-border/30 rounded-full h-1.5 overflow-hidden">
+            <div className="h-full flex">
+              <div
+                className="bg-green-400/70 transition-all duration-300"
+                style={{ width: `${(keptCount / totalPositions) * 100}%` }}
+              />
+              <div
+                className="bg-red-400/70 transition-all duration-300"
+                style={{ width: `${(deletedCount / totalPositions) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Puzzle info */}
         <div className="border border-border rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-2 text-xs text-text-muted">
@@ -747,6 +812,12 @@ export default function PlayPage() {
                 <span>move {position.moveNumber}</span>
                 <span className="text-border">·</span>
                 <span>{position.phase}</span>
+                {position.category && (
+                  <>
+                    <span className="text-border">·</span>
+                    <span>{position.category}</span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -762,49 +833,27 @@ export default function PlayPage() {
               {position?.sideToMove === "w" ? "White" : "Black"} to move
             </span>
           </div>
+          {position && (
+            <div className="text-[10px] font-[family-name:var(--font-mono)] text-text-muted/50 break-all">
+              {position.id}
+            </div>
+          )}
         </div>
 
-        {/* Session stats */}
-        <div className="border border-border rounded-lg p-4 space-y-3">
-          <div className="text-xs font-bold uppercase tracking-widest text-text-muted">
-            session
-          </div>
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-text-muted">puzzles</span>
-            <span className="font-[family-name:var(--font-mono)] text-text-secondary">
-              {sessionScores.length}
-            </span>
-          </div>
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-text-muted">ACPL</span>
-            <span className="font-[family-name:var(--font-mono)] text-text-secondary">
-              {sessionACPL ?? 0}
-            </span>
-          </div>
-          <div className="flex justify-between items-baseline">
-            <span className="text-xs text-text-muted">avg time</span>
-            <span className="font-[family-name:var(--font-mono)] text-text-secondary">
-              {avgTime !== null
-                ? `${Math.floor(avgTime / 60)}:${(avgTime % 60).toString().padStart(2, "0")}`
-                : "0:00"}
-            </span>
-          </div>
-          <div className="flex justify-between items-baseline">
-            <Timer key={timerKey} isRunning={timerRunning} />
-          </div>
-          {sessionScores.length > 0 && (
-            <button
-              onClick={() => {
-                setSessionScores([]);
-                setSessionTimes([]);
-                try { localStorage.removeItem("session-scores"); } catch {}
-                try { localStorage.removeItem("session-times"); } catch {}
-              }}
-              className="w-full text-xs text-text-muted hover:text-text-secondary border border-border hover:border-border-hover rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
-            >
-              reset session
-            </button>
-          )}
+        {/* Actions */}
+        <div className="border border-border rounded-lg p-3 space-y-2">
+          <button
+            onClick={handleExport}
+            className="w-full text-xs text-text-muted hover:text-text-secondary border border-border hover:border-border-hover rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+          >
+            export decisions
+          </button>
+          <button
+            onClick={handleClear}
+            className="w-full text-xs text-red-400/60 hover:text-red-400 border border-border hover:border-red-500/40 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+          >
+            clear all
+          </button>
         </div>
 
         {/* Engine status */}
@@ -965,8 +1014,6 @@ export default function PlayPage() {
             onPieceDrop={onPieceDrop}
             onSquareMouseDown={onSquareMouseDown}
             onSquareClick={onSquareClick}
-            onSquareMouseUp={onSquareMouseUp}
-            onArrowsChange={onArrowsChange}
             boardOrientation={boardOrientation}
             allowDragging={gameState === "playing"}
             arrows={displayArrows}
@@ -974,14 +1021,12 @@ export default function PlayPage() {
             boardKey={position?.id}
           />
 
-          {/* Loading overlay */}
           {gameState === "loading" && (
             <div className="absolute inset-0 flex items-center justify-center bg-bg-primary/80 rounded-lg">
               <div className="text-text-muted animate-pulse">loading...</div>
             </div>
           )}
 
-          {/* Click-to-undo overlay during confirming */}
           {gameState === "confirming" && (
             <div
               className="absolute inset-0 z-[5] cursor-default"
@@ -989,7 +1034,6 @@ export default function PlayPage() {
             />
           )}
 
-          {/* Resize handle */}
           <div
             onMouseDown={handleResizeStart}
             className="absolute -bottom-1 -right-1 w-4 h-4 cursor-nwse-resize z-10 group hidden md:block"
@@ -1011,7 +1055,7 @@ export default function PlayPage() {
         className="flex flex-col gap-3 w-full md:w-[260px]"
         style={{ height: boardSize }}
       >
-        {/* Engine lines (always visible) */}
+        {/* Engine lines */}
         <div>
           {(gameState === "evaluating" || gameState === "scored") && engineLines.length > 0 && position ? (
             <EngineLines
@@ -1041,7 +1085,7 @@ export default function PlayPage() {
           )}
         </div>
 
-        {/* Move explanation — fills remaining space, scrolls if needed */}
+        {/* Move explanation */}
         <div className="flex-1 min-h-0">
           {gameState === "scored" && feedback ? (
             <MoveExplanation
@@ -1073,7 +1117,7 @@ export default function PlayPage() {
           )}
         </div>
 
-        {/* Feedback panel */}
+        {/* Feedback panel — KEEP / DELETE instead of NEXT */}
         <div className="border border-border rounded-lg p-4 flex flex-col items-center justify-center shrink-0" style={{ height: 230 }}>
           {gameState === "playing" && (
             <div className="text-center space-y-2">
@@ -1144,12 +1188,20 @@ export default function PlayPage() {
                 sideToMove={position?.sideToMove ?? "w"}
                 show={true}
               />
-              <button
-                onClick={loadPosition}
-                className="w-full mt-2 px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
-              >
-                next
-              </button>
+              <div className="flex gap-2 w-full mt-2">
+                <button
+                  onClick={handleKeep}
+                  className="flex-1 px-4 py-3 text-sm font-bold uppercase tracking-widest border-2 border-green-500/60 text-green-400 hover:bg-green-500/20 rounded-lg transition-all duration-200 cursor-pointer"
+                >
+                  keep
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-3 text-sm font-bold uppercase tracking-widest border-2 border-red-500/60 text-red-400 hover:bg-red-500/20 rounded-lg transition-all duration-200 cursor-pointer"
+                >
+                  delete
+                </button>
+              </div>
             </div>
           )}
 

@@ -341,7 +341,7 @@ async function main() {
     for (const p of positions) {
       const ratingPart = p.puzzleRating != null ? `, puzzleRating: ${p.puzzleRating}` : "";
       const id = positionId(p.fen, p.category);
-      lines.push(`  { id: "${id}", fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}"${ratingPart} },`);
+      lines.push(`  { id: "${id}", fen: ${JSON.stringify(p.fen)}, sideToMove: "${p.sideToMove}", opening: ${JSON.stringify(p.opening)}, phase: "${p.phase}", moveNumber: ${p.moveNumber}, category: "${p.category}"${ratingPart}, markedKeeper: false },`);
     }
     lines.push(`];`);
     lines.push(``);
