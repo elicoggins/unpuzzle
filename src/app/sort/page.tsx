@@ -11,10 +11,10 @@ import { MoveExplanation } from "@/components/move-explanation";
 import { getEngine, type EvalResult, type DepthUpdate, type EngineLine } from "@/lib/chess-engine";
 import { evaluateWithFallback } from "@/lib/eval";
 import { getScoreArrowColor } from "@/lib/scoring";
-import { getUnsortedPosition, getAllPositions, getPositionCounts } from "@/lib/positions";
+import { getAllPositions, type CuratedPosition } from "@/lib/positions";
 import { playMoveSound, playCaptureSound, playGoodSound, playBadSound } from "@/lib/sounds";
 import { loadDepth } from "@/app/settings/page";
-import type { Position, EvalFeedback } from "@/lib/types";
+import type { Position, EvalFeedback, PositionCategory } from "@/lib/types";
 import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
 type GameState = "loading" | "playing" | "confirming" | "evaluating" | "scored";
@@ -32,6 +32,51 @@ function loadDecisions(): Record<string, "keep" | "delete"> {
 
 function saveDecisions(d: Record<string, "keep" | "delete">) {
   localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(d));
+}
+
+type CategoryPref = { cat: PositionCategory; enabled: boolean };
+const ALL_SORT_CATEGORIES: PositionCategory[] = ["tactical", "balanced", "critical", "tricky", "endgame"];
+const SORT_CAT_PREFS_KEY = "sort-category-prefs";
+
+function loadCategoryPrefs(): CategoryPref[] {
+  try {
+    const raw = localStorage.getItem(SORT_CAT_PREFS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as CategoryPref[];
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((p) => ALL_SORT_CATEGORIES.includes(p.cat))) {
+        const existing = new Set(parsed.map((p) => p.cat));
+        const extra = ALL_SORT_CATEGORIES.filter((c) => !existing.has(c)).map((c) => ({ cat: c, enabled: true }));
+        return [...parsed, ...extra];
+      }
+    }
+  } catch {}
+  return ALL_SORT_CATEGORIES.map((cat) => ({ cat, enabled: true }));
+}
+
+function saveCategoryPrefs(prefs: CategoryPref[]) {
+  localStorage.setItem(SORT_CAT_PREFS_KEY, JSON.stringify(prefs));
+}
+
+function pickWeightedUnsorted(
+  decisions: Record<string, string>,
+  prefs: CategoryPref[]
+): CuratedPosition | null {
+  const enabledCats = new Set(prefs.filter((p) => p.enabled).map((p) => p.cat));
+  const candidates = getAllPositions().filter(
+    (p) => !(p.id in decisions) && enabledCats.has(p.category as PositionCategory)
+  );
+  if (candidates.length === 0) return null;
+  const enabledPrefs = prefs.filter((p) => p.enabled);
+  const numEnabled = enabledPrefs.length;
+  const weightByCat = new Map<string, number>();
+  enabledPrefs.forEach((p, idx) => weightByCat.set(p.cat, numEnabled - idx));
+  const totalWeight = candidates.reduce((sum, p) => sum + (weightByCat.get(p.category!) ?? 1), 0);
+  let roll = Math.random() * totalWeight;
+  for (const pos of candidates) {
+    roll -= weightByCat.get(pos.category!) ?? 1;
+    if (roll <= 0) return pos;
+  }
+  return candidates[candidates.length - 1];
 }
 
 /** Convert a UCI PV to SAN moves, starting from a given FEN. */
@@ -106,11 +151,38 @@ export default function SortPage() {
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const [allDone, setAllDone] = useState(false);
 
-  // ── Stats ──
-  const totalPositions = useMemo(() => getAllPositions().length, []);
-  const keptCount = useMemo(() => Object.values(decisions).filter((v) => v === "keep").length, [decisions]);
-  const deletedCount = useMemo(() => Object.values(decisions).filter((v) => v === "delete").length, [decisions]);
+  // ── Category prefs ──
+  const [categoryPrefs, setCategoryPrefs] = useState<CategoryPref[]>(() =>
+    ALL_SORT_CATEGORIES.map((cat) => ({ cat, enabled: true }))
+  );
+
+  // ── Stats (scoped to enabled categories) ──
+  const enabledCats = useMemo(
+    () => new Set(categoryPrefs.filter((p) => p.enabled).map((p) => p.cat)),
+    [categoryPrefs]
+  );
+  const allPositionsFlat = useMemo(() => getAllPositions(), []);
+  const positionsInScope = useMemo(
+    () => allPositionsFlat.filter((p) => enabledCats.has(p.category as PositionCategory)),
+    [allPositionsFlat, enabledCats]
+  );
+  const totalPositions = positionsInScope.length;
+  const keptCount = useMemo(
+    () => positionsInScope.filter((p) => decisions[p.id] === "keep").length,
+    [positionsInScope, decisions]
+  );
+  const deletedCount = useMemo(
+    () => positionsInScope.filter((p) => decisions[p.id] === "delete").length,
+    [positionsInScope, decisions]
+  );
   const remaining = totalPositions - keptCount - deletedCount;
+  const unsortedCountByCat = useMemo(() => {
+    const counts = {} as Record<PositionCategory, number>;
+    for (const cat of ALL_SORT_CATEGORIES) {
+      counts[cat] = allPositionsFlat.filter((p) => p.category === cat && !(p.id in decisions)).length;
+    }
+    return counts;
+  }, [allPositionsFlat, decisions]);
 
   // ── Auth check ──
   useEffect(() => {
@@ -124,9 +196,10 @@ export default function SortPage() {
     engine.init().then(() => setEngineReady(true));
   }, [authed]);
 
-  // Load decisions from localStorage on mount
+  // Load decisions and category prefs from localStorage on mount
   useEffect(() => {
     setDecisions(loadDecisions());
+    setCategoryPrefs(loadCategoryPrefs());
   }, []);
 
   // Set initial board size on mount and recalculate on window resize
@@ -165,7 +238,9 @@ export default function SortPage() {
     selectedSquareRef.current = null;
     setTimerKey((k) => k + 1);
 
-    const data = getUnsortedPosition(currentDecisions);
+    const currentPrefs = loadCategoryPrefs();
+    setCategoryPrefs(currentPrefs);
+    const data = pickWeightedUnsorted(currentDecisions, currentPrefs);
 
     if (!data) {
       setAllDone(true);
@@ -437,6 +512,34 @@ export default function SortPage() {
     setDecisions({});
     loadPosition();
   }, [loadPosition]);
+
+  const moveCatUp = useCallback((idx: number) => {
+    if (idx === 0) return;
+    setCategoryPrefs((prev) => {
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      saveCategoryPrefs(next);
+      return next;
+    });
+  }, []);
+
+  const moveCatDown = useCallback((idx: number) => {
+    setCategoryPrefs((prev) => {
+      if (idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      saveCategoryPrefs(next);
+      return next;
+    });
+  }, []);
+
+  const toggleCat = useCallback((idx: number) => {
+    setCategoryPrefs((prev) => {
+      const next = prev.map((p, i) => (i === idx ? { ...p, enabled: !p.enabled } : p));
+      saveCategoryPrefs(next);
+      return next;
+    });
+  }, []);
 
   const onEngineLineMoveClick = useCallback(
     (lineIdx: number, moveIdx: number) => {
@@ -801,6 +904,60 @@ export default function SortPage() {
                 style={{ width: `${(deletedCount / totalPositions) * 100}%` }}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Category queue */}
+        <div className="border border-border rounded-lg p-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">queue</div>
+          <div className="space-y-0.5">
+            {categoryPrefs.map((pref, idx) => (
+              <div
+                key={pref.cat}
+                className={`flex items-center gap-1.5 rounded px-1 py-0.5 transition-opacity ${
+                  pref.enabled ? "opacity-100" : "opacity-40"
+                }`}
+              >
+                <span className="text-[10px] font-[family-name:var(--font-mono)] text-text-muted/50 w-3 text-right shrink-0">
+                  {idx + 1}
+                </span>
+                <button
+                  onClick={() => toggleCat(idx)}
+                  title={pref.enabled ? "Disable" : "Enable"}
+                  className="w-3 h-3 rounded-full border transition-colors shrink-0 cursor-pointer"
+                  style={{
+                    borderColor: pref.enabled ? "var(--color-accent)" : "var(--color-border)",
+                    backgroundColor: pref.enabled ? "var(--color-accent)" : "transparent",
+                  }}
+                />
+                <span
+                  className={`flex-1 text-xs capitalize ${
+                    pref.enabled ? "text-text-secondary" : "text-text-muted/40"
+                  }`}
+                >
+                  {pref.cat}
+                </span>
+                <span className="text-[10px] font-[family-name:var(--font-mono)] text-text-muted/50 w-5 text-right shrink-0">
+                  {unsortedCountByCat[pref.cat] ?? 0}
+                </span>
+                <div className="flex flex-col shrink-0 -space-y-0.5">
+                  <button
+                    onClick={() => moveCatUp(idx)}
+                    disabled={idx === 0}
+                    className="text-[8px] text-text-muted/40 hover:text-text-secondary disabled:opacity-20 disabled:cursor-not-allowed leading-none cursor-pointer"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    onClick={() => moveCatDown(idx)}
+                    disabled={idx === categoryPrefs.length - 1}
+                    className="text-[8px] text-text-muted/40 hover:text-text-secondary disabled:opacity-20 disabled:cursor-not-allowed leading-none cursor-pointer"
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
