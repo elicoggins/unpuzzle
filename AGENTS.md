@@ -49,6 +49,7 @@ Study the position, determine what you think is a good move. Stockfish evaluates
 | `/` | `src/app/page.tsx` | Landing / home |
 | `/play` | `src/app/play/page.tsx` | Main game loop |
 | `/settings` | `src/app/settings/page.tsx` | Accent color, font, engine depth |
+| `/sort` | `src/app/sort/page.tsx` | Position sorting tool (DEV only)) |
 
 ## Game Flow (`/play`)
 
@@ -83,8 +84,8 @@ All evals from Stockfish are **side-to-move perspective** (positive = side to mo
 - **Index**: `src/lib/positions/index.ts` — exports `CuratedPosition` type, `getRandomPosition()`, weighted picker logic
 - **Category files**: `tactical.ts`, `balanced.ts`, `critical.ts`, `tricky.ts`, `endgame.ts`
 - **Categories**: `tactical`, `balanced`, `critical`, `tricky`, `endgame`
-- **Count**: ~460 positions; no hardcoded FENs — all fetched from Lichess API at generation time
-- **Weights**: `tactical:0.10, balanced:0.30, critical:0.25, tricky:0.10, endgame:0.25`
+- **Count**: ~910 positions (tactical:60, balanced:610, critical:76, tricky:60, endgame:106); no hardcoded FENs — all fetched from Lichess API at generation time
+- **Weights**: `tactical:0.20, balanced:0.25, critical:0.20, tricky:0.15, endgame:0.20`
 - To regenerate: `node scripts/fetch-positions.mjs` (writes directly to `src/lib/positions/*.ts`)
 
 ## Layout
@@ -92,10 +93,10 @@ All evals from Stockfish are **side-to-move perspective** (positive = side to mo
 Three-column layout on `/play`:
 
 ```
-[Left Panel 220px] [Eval Bar + Board] [Right Panel 280px]
+[Left Panel 220px] [Eval Bar + Board] [Right Panel 260px]
 ```
 
-**Left panel** (top to bottom): puzzle info (opening, move number, phase, side to move) → session stats (puzzles, ACPL, avg time, timer, reset) → engine status (while loading) → move history box (200px, scrollable, browse mode after scoring)
+**Left panel** (top to bottom): puzzle info (move number, phase, side to move) → session stats (puzzles, ACPL, streak/best streak toggle) → engine status (while loading) → move history box (scrollable, browse mode after scoring)
 
 **Right panel** (top to bottom): move history → engine lines (3 PV rows, always rendered) → feedback panel (state machine: playing / confirming / evaluating / scored+next button)
 
@@ -109,14 +110,15 @@ Three-column layout on `/play`:
 | `engine-lines.tsx` | 3 PV rows; sorted by `multipv` (best first); eval badge color: `bg-white/85 text-gray-900` (white winning) / `bg-black/40 text-white/60` (black winning) |
 | `eval-bar.tsx` | Vertical eval bar, orientation-aware fill direction |
 | `score-reveal.tsx` | Animated result display; shared `grid grid-cols-2` for metric + best/category alignment |
-| `nav.tsx` | Top nav |
+| `move-explanation.tsx` | Prose explanation of the played move; shows position shift, best line (clickable), and refutation line (clickable) |
+| `nav.tsx` | Top nav (links: play, settings) |
 | `timer.tsx` | Per-puzzle countdown display |
 | `accent-provider.tsx` | Injects CSS variables for accent color and font from localStorage |
 
 ## Settings
 
-- **Accent color**: 3 presets (Green, Gold, Pink) stored in `localStorage`
-- **Heading font**: Orbitron or Space Grotesk
+- **Accent color**: 3 presets (Green, Gold, Pink) + custom hex color picker; stored in `localStorage` as `accent-color`
+- **Heading font**: 4 options — Orbitron, Space Grotesk, Audiowide, Press Start 2P; stored in `localStorage` as `heading-font`
 - **Engine depth**: 18 / 20 / 24 (default 18); stored in `localStorage` as `engine-depth`
 
 ## Known Quirks

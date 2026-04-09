@@ -41,8 +41,42 @@ export function getWeightedRandomPosition(): CuratedPosition {
   return pool[i];
 }
 
-export function getRandomPosition(): Position {
-  return getWeightedRandomPosition();
+/**
+ * Returns a position the user hasn't seen yet (by id).
+ * Preserves weighted category distribution when possible.
+ * If all positions in the sampled category are seen, falls back to any unseen position.
+ * If ALL positions are seen, clears seenIds (pool exhausted reset) and picks freely.
+ * Returns the position plus whether a pool reset occurred.
+ */
+export function getRandomPosition(seenIds?: Set<string>): Position {
+  if (!seenIds || seenIds.size === 0) {
+    return getWeightedRandomPosition();
+  }
+
+  const allPositions = getAllPositions();
+  const totalSeen = seenIds.size;
+
+  // Pool exhausted — caller should have already cleared seenIds, but handle gracefully
+  if (totalSeen >= allPositions.length) {
+    return getWeightedRandomPosition();
+  }
+
+  // Try weighted category first, filtered to unseen
+  const roll = Math.random();
+  let cum = 0;
+  let cat: PositionCategory = "balanced";
+  for (const [c, w] of Object.entries(CATEGORY_WEIGHTS) as [PositionCategory, number][]) {
+    cum += w; if (roll < cum) { cat = c; break; }
+  }
+  const catPool = CATEGORY_POOLS[cat].filter((p) => !seenIds.has(p.id));
+
+  if (catPool.length > 0) {
+    return catPool[Math.floor(Math.random() * catPool.length)];
+  }
+
+  // Fall back: any unseen position across all categories
+  const unseen = allPositions.filter((p) => !seenIds.has(p.id));
+  return unseen[Math.floor(Math.random() * unseen.length)];
 }
 
 /** Flat array of every position across all categories. */

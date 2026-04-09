@@ -114,9 +114,9 @@ export const EVAL_BAR_WIDTH = 28;
 // ── Position sampling weights ────────────────────────────────────────────
 
 export const CATEGORY_WEIGHTS: Record<PositionCategory, number> = {
-  tactical: 0.10,
-  balanced: 0.30,
-  critical: 0.25,
-  tricky: 0.10,
-  endgame: 0.25,
+  tactical: 0.20,
+  balanced: 0.25,
+  critical: 0.20,
+  tricky: 0.15,
+  endgame: 0.20,
 };

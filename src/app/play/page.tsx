@@ -6,7 +6,7 @@ import { BoardCenter } from "@/components/play/board-center";
 import { RightPanel } from "@/components/play/right-panel";
 import { MoveHistory } from "@/components/play/move-history";
 import { getEngine } from "@/lib/chess-engine";
-import { getRandomPosition } from "@/lib/positions";
+import { getRandomPosition, getAllPositions } from "@/lib/positions";
 import { useEvaluation } from "@/hooks/use-evaluation";
 import { useBoardInteraction } from "@/hooks/use-board-interaction";
 import { useBoardSize } from "@/hooks/use-board-size";
@@ -33,7 +33,26 @@ export default function PlayPage() {
   const [streakShowBest, setStreakShowBest] = useState(false);
   const streakRef = useRef(0);
 
+  // ── Seen positions ──
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
   const onScored = useCallback((centipawnLoss: number) => {
+    // Mark the current position as seen
+    setPosition((prev) => {
+      if (prev) {
+        const next = new Set(seenIdsRef.current);
+        next.add(prev.id);
+        // Pool exhausted — reset seen set (minus what we just added, so we still track current)
+        if (next.size >= getAllPositions().length) {
+          seenIdsRef.current = new Set([prev.id]);
+          try { localStorage.setItem("seen-positions", JSON.stringify([prev.id])); } catch {}
+        } else {
+          seenIdsRef.current = next;
+          try { localStorage.setItem("seen-positions", JSON.stringify([...next])); } catch {}
+        }
+      }
+      return prev;
+    });
     setSessionScores((prev) => {
       const next = [...prev, Math.min(centipawnLoss, 300)];
       try { localStorage.setItem("session-scores", JSON.stringify(next)); } catch {}
@@ -86,6 +105,12 @@ export default function PlayPage() {
   // ── Load session from localStorage ──
   useEffect(() => {
     try {
+      const storedSeen = localStorage.getItem("seen-positions");
+      if (storedSeen) {
+        seenIdsRef.current = new Set(JSON.parse(storedSeen));
+      }
+    } catch {}
+    try {
       const stored = localStorage.getItem("session-scores");
       if (stored) {
         const scores: number[] = JSON.parse(stored);
@@ -119,7 +144,7 @@ export default function PlayPage() {
     resetEvaluation();
     setTimerKey((k) => k + 1);
 
-    const data = getRandomPosition();
+    const data = getRandomPosition(seenIdsRef.current);
     setPosition(data);
     board.initBoard(data);
 
