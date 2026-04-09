@@ -44,6 +44,7 @@ export function RightPanel({
 }: RightPanelProps) {
   return (
     <div
+      data-component="right-panel"
       className="flex flex-col gap-3 w-full md:w-[260px]"
       style={{ height: boardSize }}
     >

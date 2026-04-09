@@ -43,7 +43,7 @@ export function BoardCenter({
   boardContainerRef,
 }: BoardCenterProps) {
   return (
-    <div className="flex items-center gap-1 flex-shrink-0">
+    <div data-component="board-center" className="flex items-center gap-1 flex-shrink-0">
       <EvalBar
         eval={evalForBar.eval}
         isMate={evalForBar.isMate}

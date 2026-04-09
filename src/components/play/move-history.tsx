@@ -26,7 +26,7 @@ export function MoveHistory({
   const puzzleMoveNumber = position?.moveNumber ?? 1;
 
   return (
-    <div className="border border-border rounded-lg flex-col overflow-hidden flex flex-1 min-h-0">
+    <div data-component="move-history" className="border border-border rounded-lg flex-col overflow-hidden flex flex-1 min-h-0">
       <div className="px-3 py-1.5 border-b border-border bg-bg-secondary">
         <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
           moves

@@ -12,7 +12,7 @@ export function Nav() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-b border-border px-3 md:px-6 py-2 flex items-center justify-between">
+    <nav data-component="nav" className="border-b border-border px-3 md:px-6 py-2 flex items-center justify-between">
       <Link
         href="/"
         className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-text-primary hover:text-accent transition-colors"

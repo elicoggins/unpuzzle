@@ -58,6 +58,7 @@ export function EvalBar({ eval: cp, isMate, mateIn, height, orientation, reveale
 
   return (
     <div
+      data-component="eval-bar"
       className="relative flex-shrink-0 rounded overflow-hidden"
       style={{ width: EVAL_BAR_WIDTH, height }}
     >

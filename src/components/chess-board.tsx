@@ -43,7 +43,7 @@ export function ChessBoard({
   boardKey,
 }: ChessBoardProps) {
   return (
-    <div className="rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full aspect-square">
+    <div data-component="chess-board" className="rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full aspect-square">
       <Board
         key={boardKey}
         options={{

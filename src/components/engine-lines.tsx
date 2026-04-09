@@ -65,7 +65,7 @@ export function EngineLines({ fen, lines, depth, isSearching, onMoveClick }: Eng
   if (lines.length === 0) return null;
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div data-component="engine-lines" className="border border-border rounded-lg overflow-hidden">
       <div className="px-3 py-1.5 border-b border-border bg-bg-secondary flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
           engine

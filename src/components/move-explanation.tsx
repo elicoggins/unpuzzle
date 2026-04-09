@@ -155,8 +155,9 @@ export function MoveExplanation({
 
   return (
     <div
+      data-component="move-explanation"
       className="border border-border rounded-lg overflow-hidden h-full flex flex-col"
-      style={{ borderLeftWidth: 3, borderLeftColor: color }}
+      style={{ borderLeftWidth: 2, borderLeftColor: color }}
     >
       <div className="px-3 py-1.5 border-b border-border bg-bg-secondary shrink-0">
         <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
