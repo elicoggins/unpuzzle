@@ -2,6 +2,7 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 function play(file: string, volume = 1) {
   if (typeof window === "undefined") return;
+  if (window.matchMedia("(pointer: coarse)").matches) return;
   const audio = new Audio(`${BASE}/sounds/${file}`);
   audio.volume = volume;
   audio.play().catch(() => {});
