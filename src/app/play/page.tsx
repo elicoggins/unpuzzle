@@ -10,6 +10,7 @@ import { getRandomPosition } from "@/lib/positions";
 import { useEvaluation } from "@/hooks/use-evaluation";
 import { useBoardInteraction } from "@/hooks/use-board-interaction";
 import { useBoardSize } from "@/hooks/use-board-size";
+import { CPL_THRESHOLDS } from "@/lib/constants";
 import type { GameState } from "@/lib/game-state";
 import type { Position } from "@/lib/types";
 
@@ -25,6 +26,13 @@ export default function PlayPage() {
   const [sessionTimes, setSessionTimes] = useState<number[]>([]);
   const startTimeRef = useRef<number>(0);
 
+  // ── Streak tracking ──
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
+  const [streakShowBest, setStreakShowBest] = useState(false);
+  const streakRef = useRef(0);
+
   const onScored = useCallback((centipawnLoss: number) => {
     setSessionScores((prev) => {
       const next = [...prev, Math.min(centipawnLoss, 300)];
@@ -37,7 +45,26 @@ export default function PlayPage() {
       try { localStorage.setItem("session-times", JSON.stringify(next)); } catch {}
       return next;
     });
+    if (centipawnLoss <= CPL_THRESHOLDS.good) {
+      const newStreak = streakRef.current + 1;
+      streakRef.current = newStreak;
+      setCurrentStreak(newStreak);
+      setBestStreak((prev) => Math.max(prev, newStreak));
+      if ([5, 10, 15, 20].includes(newStreak)) {
+        setStreakMilestone(newStreak);
+      }
+    } else {
+      streakRef.current = 0;
+      setCurrentStreak(0);
+    }
   }, []);
+
+  // ── Auto-clear streak milestone banner ──
+  useEffect(() => {
+    if (streakMilestone === null) return;
+    const id = setTimeout(() => setStreakMilestone(null), 2500);
+    return () => clearTimeout(id);
+  }, [streakMilestone]);
 
   // ── Hooks ──
   const { boardSize, boardContainerRef, handleResizeStart } = useBoardSize();
@@ -60,7 +87,25 @@ export default function PlayPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem("session-scores");
-      if (stored) setSessionScores(JSON.parse(stored));
+      if (stored) {
+        const scores: number[] = JSON.parse(stored);
+        setSessionScores(scores);
+        // Restore current streak (count back from end while CPL ≤ good)
+        let cur = 0;
+        for (let i = scores.length - 1; i >= 0; i--) {
+          if (scores[i] <= CPL_THRESHOLDS.good) cur++;
+          else break;
+        }
+        streakRef.current = cur;
+        setCurrentStreak(cur);
+        // Restore best streak
+        let best = 0, run = 0;
+        for (const s of scores) {
+          if (s <= CPL_THRESHOLDS.good) { run++; best = Math.max(best, run); }
+          else run = 0;
+        }
+        setBestStreak(best);
+      }
     } catch {}
     try {
       const stored = localStorage.getItem("session-times");
@@ -100,8 +145,14 @@ export default function PlayPage() {
       ? Math.round(sessionTimes.reduce((a, b) => a + b, 0) / sessionTimes.length)
       : null;
 
+  const avgTimeFormatted =
+    avgTime !== null
+      ? `${Math.floor(avgTime / 60)}:${(avgTime % 60).toString().padStart(2, "0")}`
+      : null;
+
   return (
-    <div className="flex-1 flex flex-col md:flex-row items-center md:items-start justify-start md:justify-center p-4 pt-2 md:pt-4 gap-4">
+    <>
+      <div className="flex-1 flex flex-col md:flex-row items-center md:items-start justify-start md:justify-center p-4 pt-2 md:pt-4 gap-4">
       {/* ── Mobile Info Bar ── */}
       <div className="flex md:hidden items-center justify-between w-full max-w-[calc(100vw-2rem)]">
         <div className="flex items-center gap-2 text-sm">
@@ -167,21 +218,32 @@ export default function PlayPage() {
             </span>
           </div>
           <div className="flex justify-between items-baseline">
-            <span className="text-xs text-text-muted">avg time</span>
-            <span className="font-[family-name:var(--font-mono)] text-text-secondary">
-              {avgTime !== null
-                ? `${Math.floor(avgTime / 60)}:${(avgTime % 60).toString().padStart(2, "0")}`
-                : "0:00"}
+            <button
+              onClick={() => setStreakShowBest((s) => !s)}
+              className="text-xs cursor-pointer transition-colors text-text-muted hover:text-accent"
+              title={streakShowBest ? "Switch to current streak" : "Switch to best streak"}
+            >
+              {streakShowBest ? "best streak" : "streak"}
+            </button>
+            <span
+              className={`font-[family-name:var(--font-mono)] transition-colors ${
+                !streakShowBest && streakMilestone !== null ? "text-accent" : "text-text-secondary"
+              }`}
+            >
+              {streakShowBest ? bestStreak : currentStreak}
             </span>
           </div>
           <div className="flex justify-between items-baseline">
-            <Timer key={timerKey} isRunning={timerRunning} />
+            <Timer key={timerKey} isRunning={timerRunning} avgTime={avgTimeFormatted} />
           </div>
           {sessionScores.length > 0 && (
             <button
               onClick={() => {
                 setSessionScores([]);
                 setSessionTimes([]);
+                setCurrentStreak(0);
+                setBestStreak(0);
+                streakRef.current = 0;
                 try { localStorage.removeItem("session-scores"); } catch {}
                 try { localStorage.removeItem("session-times"); } catch {}
               }}
@@ -259,5 +321,6 @@ export default function PlayPage() {
         }
       />
     </div>
+    </>
   );
 }

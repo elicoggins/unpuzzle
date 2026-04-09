@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 
 interface TimerProps {
   isRunning: boolean;
+  avgTime?: string | null;
 }
 
-export function Timer({ isRunning }: TimerProps) {
-  const [visible, setVisible] = useState(true);
+export function Timer({ isRunning, avgTime }: TimerProps) {
+  const [mode, setMode] = useState<"cur" | "avg">("cur");
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -21,26 +22,22 @@ export function Timer({ isRunning }: TimerProps) {
   const seconds = Math.floor(elapsed / 1000);
   const minutes = Math.floor(seconds / 60);
   const displaySeconds = seconds % 60;
+  const curFormatted = `${minutes}:${displaySeconds.toString().padStart(2, "0")}`;
 
-  const formatTime = () => {
-    return `${minutes}:${displaySeconds.toString().padStart(2, "0")}`;
-  };
+  const label = mode === "cur" ? "cur time" : "avg time";
+  const value = mode === "cur" ? curFormatted : (avgTime ?? "—");
 
   return (
     <>
       <button
-        onClick={() => setVisible(!visible)}
-        className={`text-xs cursor-pointer transition-colors ${
-          visible
-            ? "text-text-muted hover:text-text-secondary"
-            : "text-text-muted/40 hover:text-text-muted line-through"
-        }`}
-        title={visible ? "Hide timer" : "Show timer"}
+        onClick={() => setMode((m) => (m === "cur" ? "avg" : "cur"))}
+        className="text-xs cursor-pointer transition-colors text-text-muted hover:text-accent"
+        title={mode === "cur" ? "Switch to avg time" : "Switch to cur time"}
       >
-        cur time
+        {label}
       </button>
       <span className="font-[family-name:var(--font-mono)] text-text-secondary tabular-nums">
-        {visible ? formatTime() : "—"}
+        {value}
       </span>
     </>
   );

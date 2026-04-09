@@ -9,7 +9,7 @@ export default function Home() {
         </h1>
 
         <p className="text-xl text-text-secondary leading-relaxed">
-          real chess positions, not just puzzles
+          You play differently when you know it's a puzzle.
         </p>
 
 
