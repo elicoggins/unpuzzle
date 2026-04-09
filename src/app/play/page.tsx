@@ -5,6 +5,9 @@ import { Timer } from "@/components/timer";
 import { BoardCenter } from "@/components/play/board-center";
 import { RightPanel } from "@/components/play/right-panel";
 import { MoveHistory } from "@/components/play/move-history";
+import { ScoreReveal } from "@/components/score-reveal";
+import { MoveExplanation } from "@/components/move-explanation";
+import { loadDepth } from "@/app/settings/page";
 import { getEngine } from "@/lib/chess-engine";
 import { getRandomPosition, getAllPositions } from "@/lib/positions";
 import { useEvaluation } from "@/hooks/use-evaluation";
@@ -81,7 +84,7 @@ export default function PlayPage() {
   // ── Auto-clear streak milestone banner ──
   useEffect(() => {
     if (streakMilestone === null) return;
-    const id = setTimeout(() => setStreakMilestone(null), 2500);
+    const id = setTimeout(() => setStreakMilestone(null), 7500);
     return () => clearTimeout(id);
   }, [streakMilestone]);
 
@@ -312,6 +315,7 @@ export default function PlayPage() {
         displaySquareStyles={board.displaySquareStyles}
         positionId={position?.id}
         onPieceDrop={board.onPieceDrop}
+        onPieceDrag={board.onPieceDrag}
         onSquareMouseDown={board.onSquareMouseDown}
         onSquareClick={board.onSquareClick}
         onSquareMouseUp={board.onSquareMouseUp}
@@ -320,6 +324,107 @@ export default function PlayPage() {
         onResizeStart={handleResizeStart}
         boardContainerRef={boardContainerRef}
       />
+
+      {/* ── Mobile Feedback (below board, mobile only) ── */}
+      <div className="flex md:hidden flex-col gap-3 w-full max-w-[calc(100vw-2rem)]">
+        {gameState === "playing" && (
+          <div className="border border-border rounded-lg p-4 text-center space-y-2">
+            <div className="text-sm font-medium text-text-secondary">Your turn</div>
+            <div className="text-xs text-text-muted">
+              Find the best move for {position?.sideToMove === "w" ? "white" : "black"}.
+            </div>
+          </div>
+        )}
+
+        {gameState === "confirming" && board.pendingMove && (
+          <div className="border border-border rounded-lg p-4 flex flex-col items-center gap-3">
+            <div className="text-lg font-bold font-[family-name:var(--font-mono)] text-text-primary">
+              {puzzleMoveNumber}. {board.pendingMove.san}
+            </div>
+            <button
+              onClick={board.confirmMove}
+              className="w-full px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
+            >
+              confirm
+            </button>
+            <button
+              onClick={board.undoMove}
+              className="w-full text-xs text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+            >
+              undo
+            </button>
+          </div>
+        )}
+
+        {gameState === "evaluating" && (
+          <div className="border border-border rounded-lg p-4 text-center space-y-3">
+            <div className="text-sm text-text-secondary">analyzing...</div>
+            {engineDepth && (
+              <div className="text-xs font-[family-name:var(--font-mono)] text-text-muted space-y-1">
+                <div>
+                  depth {engineDepth.depth}
+                  {" · "}
+                  {engineDepth.isMate
+                    ? `M${Math.abs(engineDepth.mateIn ?? 0)}`
+                    : `${engineDepth.eval >= 0 ? "+" : ""}${(engineDepth.eval / 100).toFixed(1)}`}
+                </div>
+                <div className="w-full bg-border/30 rounded-full h-1 overflow-hidden">
+                  <div
+                    className="h-full bg-accent/60 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, (engineDepth.depth / loadDepth()) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {gameState === "scored" && feedback && (
+          <>
+            <div className="border border-border rounded-lg p-4 flex flex-col items-center gap-3">
+              <ScoreReveal
+                centipawnLoss={feedback.centipawnLoss}
+                bestMoveSan={feedback.bestMoveSan}
+                category={position?.category}
+                evalAfterBest={feedback.evalAfterBest}
+                evalAfterPlayed={feedback.evalAfterPlayed}
+                isMateBefore={feedback.isMateBefore}
+                mateInBefore={feedback.mateInBefore}
+                isMateAfterPlayed={feedback.isMateAfterPlayed}
+                sideToMove={position?.sideToMove ?? "w"}
+                show={true}
+              />
+              <button
+                onClick={loadPosition}
+                className="w-full mt-2 px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 border-accent text-accent hover:bg-accent hover:text-bg-primary rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                next
+              </button>
+            </div>
+            <MoveExplanation
+              centipawnLoss={feedback.centipawnLoss}
+              evalBefore={feedback.evalBefore}
+              evalAfterPlayed={feedback.evalAfterPlayed}
+              sideToMove={position?.sideToMove ?? "w"}
+              bestMoveSan={feedback.bestMoveSan}
+              bestLine={feedback.bestLine}
+              refutationLine={feedback.refutationLine}
+              isMateBefore={feedback.isMateBefore}
+              mateInBefore={feedback.mateInBefore}
+              isMateAfterPlayed={feedback.isMateAfterPlayed}
+              show={true}
+              onBestLineClick={board.onBestLineClick}
+              onRefutationLineClick={board.onRefutationLineClick}
+            />
+          </>
+        )}
+
+        {gameState === "loading" && (
+          <div className="border border-border rounded-lg p-4 text-center">
+            <div className="text-sm text-text-muted animate-pulse">loading...</div>
+          </div>
+        )}
+      </div>
 
       {/* ── Right Panel ── */}
       <RightPanel

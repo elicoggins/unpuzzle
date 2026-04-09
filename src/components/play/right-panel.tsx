@@ -45,7 +45,7 @@ export function RightPanel({
   return (
     <div
       data-component="right-panel"
-      className="flex flex-col gap-3 w-full md:w-[260px]"
+      className="hidden md:flex flex-col gap-3 w-full md:w-[260px]"
       style={{ height: boardSize }}
     >
       {/* Engine lines (always visible) */}

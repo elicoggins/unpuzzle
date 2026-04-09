@@ -1,6 +1,6 @@
 "use client";
 
-import { EVAL_BAR_WIDTH } from "@/lib/constants";
+
 
 interface EvalBarProps {
   /** Centipawn eval from white's perspective */
@@ -59,8 +59,8 @@ export function EvalBar({ eval: cp, isMate, mateIn, height, orientation, reveale
   return (
     <div
       data-component="eval-bar"
-      className="relative flex-shrink-0 rounded overflow-hidden"
-      style={{ width: EVAL_BAR_WIDTH, height }}
+      className="relative flex-shrink-0 rounded overflow-hidden w-4 md:w-7"
+      style={{ height }}
     >
       {/* Dark background (entire bar) */}
       <div className="absolute inset-0 bg-[var(--color-eval-black)]" />

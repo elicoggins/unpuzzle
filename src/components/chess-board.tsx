@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
+import { useState, useEffect } from "react";
+import type { PieceDropHandlerArgs, PieceHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 
 const Board = dynamic(
   () => import("react-chessboard").then((m) => m.Chessboard),
@@ -16,6 +17,7 @@ const Board = dynamic(
 interface ChessBoardProps {
   position: string;
   onPieceDrop?: (args: PieceDropHandlerArgs) => boolean;
+  onPieceDrag?: (args: PieceHandlerArgs) => void;
   onSquareMouseDown?: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
   onSquareClick?: (args: SquareHandlerArgs) => void;
   onSquareMouseUp?: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
@@ -31,6 +33,7 @@ interface ChessBoardProps {
 export function ChessBoard({
   position,
   onPieceDrop,
+  onPieceDrag,
   onSquareMouseDown,
   onSquareClick,
   onSquareMouseUp,
@@ -42,6 +45,13 @@ export function ChessBoard({
   squareStyles,
   boardKey,
 }: ChessBoardProps) {
+  const [dragActivationDistance, setDragActivationDistance] = useState(0);
+
+  useEffect(() => {
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    if (isTouch) setDragActivationDistance(8);
+  }, []);
+
   return (
     <div data-component="chess-board" className="rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full aspect-square">
       <Board
@@ -50,6 +60,7 @@ export function ChessBoard({
           id: "unpuzzle-board",
           position,
           onPieceDrop,
+          onPieceDrag,
           onSquareMouseDown,
           onSquareClick,
           onSquareMouseUp,
@@ -57,7 +68,7 @@ export function ChessBoard({
           boardOrientation,
           allowDragging,
           animationDurationInMs,
-          dragActivationDistance: 0,
+          dragActivationDistance,
           arrows: arrows ?? [],
           clearArrowsOnClick: true,
           clearArrowsOnPositionChange: true,

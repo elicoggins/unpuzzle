@@ -2,7 +2,7 @@
 
 import { ChessBoard } from "@/components/chess-board";
 import { EvalBar } from "@/components/eval-bar";
-import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
+import type { PieceDropHandlerArgs, PieceHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 import type { GameState } from "@/lib/game-state";
 
 interface BoardCenterProps {
@@ -15,6 +15,7 @@ interface BoardCenterProps {
   displaySquareStyles: Record<string, React.CSSProperties>;
   positionId?: string;
   onPieceDrop: (args: PieceDropHandlerArgs) => boolean;
+  onPieceDrag?: (args: PieceHandlerArgs) => void;
   onSquareMouseDown: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
   onSquareClick: (args: SquareHandlerArgs) => void;
   onSquareMouseUp?: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
@@ -34,6 +35,7 @@ export function BoardCenter({
   displaySquareStyles,
   positionId,
   onPieceDrop,
+  onPieceDrag,
   onSquareMouseDown,
   onSquareClick,
   onSquareMouseUp,
@@ -60,6 +62,7 @@ export function BoardCenter({
         <ChessBoard
           position={displayFen}
           onPieceDrop={onPieceDrop}
+          onPieceDrag={onPieceDrag}
           onSquareMouseDown={onSquareMouseDown}
           onSquareClick={onSquareClick}
           onSquareMouseUp={onSquareMouseUp}

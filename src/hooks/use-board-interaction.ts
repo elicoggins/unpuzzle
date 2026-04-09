@@ -7,7 +7,7 @@ import { walkUciPath } from "@/lib/chess-utils";
 import { playMoveSound, playCaptureSound } from "@/lib/sounds";
 import type { Position, EvalFeedback } from "@/lib/types";
 import type { EngineLine } from "@/lib/chess-engine";
-import type { PieceDropHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
+import type { PieceDropHandlerArgs, PieceHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 import type { GameState } from "@/lib/game-state";
 
 export interface UseBoardInteractionReturn {
@@ -28,6 +28,7 @@ export interface UseBoardInteractionReturn {
   displaySquareStyles: Record<string, React.CSSProperties>;
   // Handlers
   onPieceDrop: (args: PieceDropHandlerArgs) => boolean;
+  onPieceDrag: (args: PieceHandlerArgs) => void;
   onSquareMouseDown: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
   onSquareClick: (args: SquareHandlerArgs) => void;
   onSquareMouseUp: (args: SquareHandlerArgs, e: React.MouseEvent) => void;
@@ -71,6 +72,7 @@ export function useBoardInteraction(
 
   const selectedSquareRef = useRef<string | null>(null);
   const wasAlreadySelectedRef = useRef(false);
+  const justSelectedRef = useRef(false);
   const rightDownSquareRef = useRef<string | null>(null);
   const gameRef = useRef<Chess>(new Chess());
 
@@ -87,6 +89,7 @@ export function useBoardInteraction(
     setLegalMoveSquares([]);
     setSelectedSquare(null);
     selectedSquareRef.current = null;
+    justSelectedRef.current = false;
     setHighlightedSquares(new Set());
   }, []);
 
@@ -173,9 +176,13 @@ export function useBoardInteraction(
       const game = gameRef.current;
       const moves = game.moves({ square: square as Square, verbose: true });
       if (moves.length > 0 && piece) {
+        // Always re-select: keeps legalMoveSquares fresh and marks justSelectedRef
+        // so onSquareClick (which may fire after mousedown on some platforms) skips
+        // double-handling and lets onPieceDrop's wasAlreadySelectedRef do deselect.
         setLegalMoveSquares(moves.map((m) => m.to));
         setSelectedSquare(square);
         selectedSquareRef.current = square;
+        justSelectedRef.current = true;
       } else {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
@@ -187,23 +194,60 @@ export function useBoardInteraction(
   );
 
   const onSquareClick = useCallback(
-    ({ square }: SquareHandlerArgs) => {
+    ({ square, piece }: SquareHandlerArgs) => {
       if (gameState !== "playing") return;
       const game = gameRef.current;
 
+      // Execute move if a legal destination is tapped/clicked
       if (selectedSquareRef.current && legalMoveSquares.includes(square)) {
         executeMove(selectedSquareRef.current, square);
         return;
       }
 
+      // On desktop, onSquareMouseDown fires first and freshly selects the piece.
+      // justSelectedRef prevents us from immediately undoing that selection here.
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        return;
+      }
+
       const moves = game.moves({ square: square as Square, verbose: true });
-      if (moves.length === 0) {
+      if (moves.length > 0 && piece) {
+        if (selectedSquareRef.current === square) {
+          // Re-tapping the already-selected piece → deselect
+          setLegalMoveSquares([]);
+          setSelectedSquare(null);
+          selectedSquareRef.current = null;
+        } else {
+          // New selection (mobile first-tap, or desktop clicking a different own piece)
+          setLegalMoveSquares(moves.map((m) => m.to));
+          setSelectedSquare(square);
+          selectedSquareRef.current = square;
+        }
+      } else {
         setLegalMoveSquares([]);
         setSelectedSquare(null);
         selectedSquareRef.current = null;
       }
     },
     [gameState, legalMoveSquares, executeMove]
+  );
+
+  const onPieceDrag = useCallback(
+    ({ square }: PieceHandlerArgs) => {
+      if (gameState !== "playing" || !square) return;
+      const game = gameRef.current;
+      const moves = game.moves({ square: square as Square, verbose: true });
+      if (moves.length > 0) {
+        // Only update legalMoveSquares for the dots overlay — do NOT touch
+        // selectedSquareRef.current here. onPieceDrag fires during pointerdown,
+        // which is BEFORE mousedown, so modifying selectedSquareRef would cause
+        // onSquareMouseDown to think the piece was already selected (wasAlreadySelectedRef
+        // would be set to true), making onPieceDrop clear the selection.
+        setLegalMoveSquares(moves.map((m) => m.to));
+      }
+    },
+    [gameState]
   );
 
   const onSquareMouseUp = useCallback(({ square }: SquareHandlerArgs, e: React.MouseEvent) => {
@@ -385,6 +429,7 @@ export function useBoardInteraction(
     displayArrows,
     displaySquareStyles,
     onPieceDrop,
+    onPieceDrag,
     onSquareMouseDown,
     onSquareClick,
     onSquareMouseUp,
