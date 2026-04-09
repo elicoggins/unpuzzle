@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Space_Grotesk, JetBrains_Mono, Orbitron, Press_Start_2P, Audiowide } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
@@ -46,6 +47,20 @@ export default function RootLayout({
       lang="en"
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${orbitron.variable} ${pressStart2P.variable} ${audiowide.variable} h-full antialiased`}
     >
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-5WZZEF8W39"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-5WZZEF8W39');
+          `}
+        </Script>
+      </head>
       <body className="min-h-full flex flex-col bg-bg-primary text-text-primary font-[family-name:var(--font-heading)]">
         <AccentProvider />
         <Nav />
