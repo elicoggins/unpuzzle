@@ -48,3 +48,5 @@ next-env.d.ts
 
 # puzzle database cache
 /.puzzle-cache
+
+sort-decisions.json
