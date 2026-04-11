@@ -87,7 +87,7 @@ export default function Home() {
             </div>
           </div>
           <p className="text-xs text-text-muted pt-2">
-            Your ACPL (Average Centipawn Loss) tracks accuracy across a session. Lower is better.
+            unpuzzle mixes puzzles, endgames, and quiet positions to force you to think like a real game. Your ACPL (Average Centipawn Loss) tracks accuracy against the engine. Lower is better.
           </p>
         </div>
       </div>
