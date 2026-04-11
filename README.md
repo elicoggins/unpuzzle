@@ -13,7 +13,7 @@ Study the position, determine what you think is a good move. Stockfish evaluates
 3. Stockfish evaluates both your move and the best move
 4. You get a score: **Perfect · Excellent · Good · Inaccuracy · Mistake · Blunder**
 
-Your session ACPL (Average Centipawn Loss) tracks accuracy over time. Lower is better. 0 is perfect.
+Your session ACPL (Average Centipawn Loss) tracks accuracy over time. Lower is better.
 
 ## Running locally
 

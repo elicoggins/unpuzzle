@@ -87,7 +87,7 @@ export default function Home() {
             </div>
           </div>
           <p className="text-xs text-text-muted pt-2">
-            Your ACPL (Average Centipawn Loss) tracks accuracy across a session. Lower is better — under 20 is elite.
+            Your ACPL (Average Centipawn Loss) tracks accuracy across a session. Lower is better.
           </p>
         </div>
       </div>
