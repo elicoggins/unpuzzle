@@ -32,32 +32,9 @@ const audiowide = Audiowide({
   subsets: ["latin"],
 });
 
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-
 export const metadata: Metadata = {
   title: "unpuzzle",
   description: "Play good moves. Not perfect ones.",
-  openGraph: {
-    title: "unpuzzle",
-    description: "Play good moves. Not perfect ones.",
-    url: "https://elicoggins.github.io/unpuzzle/",
-    siteName: "unpuzzle",
-    images: [
-      {
-        url: `${BASE}/og-image.png`,
-        width: 512,
-        height: 512,
-        alt: "unpuzzle",
-      },
-    ],
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "unpuzzle",
-    description: "Play good moves. Not perfect ones.",
-    images: [`${BASE}/og-image.png`],
-  },
 };
 
 export default function RootLayout({
