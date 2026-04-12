@@ -173,13 +173,13 @@ export default function SettingsPage() {
   const currentBoardTheme = resolveTheme(boardThemeChoice);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-start px-6 py-6">
-      <div className="max-w-4xl w-full space-y-4">
+    <div className="flex-1 flex flex-col items-center justify-start px-6 py-4">
+      <div className="max-w-4xl w-full space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">settings</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Accent Color */}
-          <div className="border border-border rounded-lg p-5 space-y-4">
+          <div className="border border-border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
               theme
             </h2>
@@ -304,7 +304,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Font */}
-          <div className="border border-border rounded-lg p-5 space-y-4">
+          <div className="border border-border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
               font
             </h2>
@@ -352,7 +352,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Engine Depth */}
-          <div className="border border-border rounded-lg p-5 space-y-4">
+          <div className="border border-border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
               engine depth
             </h2>
@@ -382,7 +382,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Board */}
-          <div className="border border-border rounded-lg p-5 space-y-4">
+          <div className="border border-border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
               board
             </h2>
@@ -487,23 +487,27 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                {/* 3×3 mini preview */}
+                {/* 4×4 mini preview */}
                 <div
                   className="inline-grid rounded overflow-hidden border border-border shrink-0 ml-auto"
                   style={{
-                    gridTemplateColumns: "repeat(3, 22px)",
-                    gridTemplateRows: "repeat(3, 22px)",
+                    gridTemplateColumns: "repeat(4, 16px)",
+                    gridTemplateRows: "repeat(4, 16px)",
                   }}
                 >
-                  {Array.from({ length: 9 }).map((_, idx) => {
-                    const row = Math.floor(idx / 3);
-                    const col = idx % 3;
+                  {Array.from({ length: 16 }).map((_, idx) => {
+                    const row = Math.floor(idx / 4);
+                    const col = idx % 4;
                     const isDark = (row + col) % 2 === 1;
                     const previewPieces: Record<number, string> = {
-                      1: "bK",
-                      3: "bP",
-                      4: "wN",
-                      8: "wK",
+                      1: "bQ",
+                      3: "bK",
+                      4: "bP",
+                      6: "bP",
+                      9: "wN",
+                      11: "wB",
+                      12: "wR",
+                      15: "wK",
                     };
                     const piece = previewPieces[idx];
                     return (
@@ -520,7 +524,7 @@ export default function SettingsPage() {
                           <img
                             src={pieceSrc(selectedPieceSet, piece as "wK")}
                             alt={piece}
-                            className="w-[18px] h-[18px]"
+                            className="w-3.5 h-3.5"
                             style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}
                           />
                         )}
