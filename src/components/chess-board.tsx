@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { PieceDropHandlerArgs, PieceHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
+import { loadPieceSetKey, buildPiecesObject, PIECE_SET_CHANGE_EVENT } from "@/lib/board-settings";
 
 const Board = dynamic(
   () => import("react-chessboard").then((m) => m.Chessboard),
@@ -46,11 +47,21 @@ export function ChessBoard({
   boardKey,
 }: ChessBoardProps) {
   const [dragActivationDistance, setDragActivationDistance] = useState(0);
+  const [pieceSetKey, setPieceSetKey] = useState<string>("cburnett");
 
   useEffect(() => {
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     if (isTouch) setDragActivationDistance(8);
+    setPieceSetKey(loadPieceSetKey());
+
+    function handlePieceSetChange(e: Event) {
+      setPieceSetKey((e as CustomEvent).detail.key);
+    }
+    window.addEventListener(PIECE_SET_CHANGE_EVENT, handlePieceSetChange);
+    return () => window.removeEventListener(PIECE_SET_CHANGE_EVENT, handlePieceSetChange);
   }, []);
+
+  const pieces = useMemo(() => buildPiecesObject(pieceSetKey), [pieceSetKey]);
 
   return (
     <div data-component="chess-board" className="rounded-lg overflow-hidden shadow-2xl shadow-black/50 w-full aspect-square">
@@ -59,6 +70,7 @@ export function ChessBoard({
         options={{
           id: "unpuzzle-board",
           position,
+          pieces,
           onPieceDrop,
           onPieceDrag,
           onSquareMouseDown,

@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { ACCENT_CHANGE_EVENT, FONT_CHANGE_EVENT } from "@/components/accent-provider";
 import { hexToHsl, hslToHex } from "@/lib/color-utils";
+import {
+  BOARD_THEMES,
+  PIECE_SETS,
+  loadBoardThemeChoice,
+  saveBoardTheme,
+  resolveTheme,
+  loadPieceSetKey,
+  savePieceSet,
+  pieceSrc,
+  type BoardThemeChoice,
+} from "@/lib/board-settings";
 
 const STORAGE_KEY = "accent-color";
 const FONT_KEY = "heading-font";
@@ -86,6 +97,11 @@ export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
   const [selectedFont, setSelectedFont] = useState("--font-orbitron");
   const [selectedDepth, setSelectedDepth] = useState<EngineDepthOption>(18);
+  const [boardThemeChoice, setBoardThemeChoice] = useState<BoardThemeChoice>({
+    type: "preset",
+    index: 0,
+  });
+  const [selectedPieceSet, setSelectedPieceSet] = useState(PIECE_SETS[0].key);
 
   useEffect(() => {
     // Accent color
@@ -93,6 +109,12 @@ export default function SettingsPage() {
 
     // Engine depth
     setSelectedDepth(loadDepth());
+
+    // Board theme
+    setBoardThemeChoice(loadBoardThemeChoice());
+
+    // Piece set
+    setSelectedPieceSet(loadPieceSetKey());
 
     // Heading font
     try {
@@ -137,7 +159,18 @@ export default function SettingsPage() {
     localStorage.setItem(DEPTH_KEY, String(depth));
   }
 
+  function selectBoardTheme(choice: BoardThemeChoice) {
+    setBoardThemeChoice(choice);
+    saveBoardTheme(choice);
+  }
+
+  function selectPieceSet(key: string) {
+    setSelectedPieceSet(key);
+    savePieceSet(key);
+  }
+
   const currentAccent = resolveAccent(choice).accent;
+  const currentBoardTheme = resolveTheme(boardThemeChoice);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-start px-6 py-6">
@@ -345,6 +378,248 @@ export default function SettingsPage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Board */}
+          <div className="border border-border rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+              board
+            </h2>
+
+            {/* Board theme + mini preview inline */}
+            <div className="space-y-2">
+              <div className="text-xs text-text-secondary">theme</div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {BOARD_THEMES.map((theme, i) => {
+                    const isActive =
+                      boardThemeChoice.type === "preset" &&
+                      boardThemeChoice.index === i;
+                    return (
+                      <button
+                        key={theme.name}
+                        onClick={() =>
+                          selectBoardTheme({ type: "preset", index: i })
+                        }
+                        className="flex flex-col items-center gap-1 cursor-pointer group"
+                        title={theme.name}
+                      >
+                        <div
+                          className="flex rounded overflow-hidden border-2 transition-colors"
+                          style={{
+                            borderColor: isActive
+                              ? currentAccent
+                              : "transparent",
+                            boxShadow: isActive
+                              ? `0 0 0 1px ${currentAccent}`
+                              : "none",
+                          }}
+                        >
+                          <span
+                            className="w-5 h-5"
+                            style={{ background: theme.light }}
+                          />
+                          <span
+                            className="w-5 h-5"
+                            style={{ background: theme.dark }}
+                          />
+                        </div>
+                        <span
+                          className="text-[10px] leading-none"
+                          style={{
+                            color: isActive
+                              ? currentAccent
+                              : "var(--color-text-muted)",
+                          }}
+                        >
+                          {theme.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  {/* Custom board theme */}
+                  <button
+                    className="flex flex-col items-center gap-1 cursor-pointer group"
+                    title="Custom"
+                    onClick={() => {
+                      if (boardThemeChoice.type !== "custom") {
+                        selectBoardTheme({
+                          type: "custom",
+                          dark: currentBoardTheme.dark,
+                          light: currentBoardTheme.light,
+                        });
+                      }
+                    }}
+                  >
+                    <div
+                      className="flex rounded overflow-hidden border-2 transition-colors relative"
+                      style={{
+                        borderColor:
+                          boardThemeChoice.type === "custom"
+                            ? currentAccent
+                            : "transparent",
+                        boxShadow:
+                          boardThemeChoice.type === "custom"
+                            ? `0 0 0 1px ${currentAccent}`
+                            : "none",
+                      }}
+                    >
+                      <span className="w-5 h-5 bg-bg-tertiary flex items-center justify-center text-[10px] text-text-muted">
+                        ✎
+                      </span>
+                      <span className="w-5 h-5 bg-bg-tertiary flex items-center justify-center text-[10px] text-text-muted">
+                        ✎
+                      </span>
+                    </div>
+                    <span
+                      className="text-[10px] leading-none"
+                      style={{
+                        color:
+                          boardThemeChoice.type === "custom"
+                            ? currentAccent
+                            : "var(--color-text-muted)",
+                      }}
+                    >
+                      Custom
+                    </span>
+                  </button>
+                </div>
+
+                {/* 3×3 mini preview */}
+                <div
+                  className="inline-grid rounded overflow-hidden border border-border shrink-0 ml-auto"
+                  style={{
+                    gridTemplateColumns: "repeat(3, 22px)",
+                    gridTemplateRows: "repeat(3, 22px)",
+                  }}
+                >
+                  {Array.from({ length: 9 }).map((_, idx) => {
+                    const row = Math.floor(idx / 3);
+                    const col = idx % 3;
+                    const isDark = (row + col) % 2 === 1;
+                    const previewPieces: Record<number, string> = {
+                      1: "bK",
+                      3: "bP",
+                      4: "wN",
+                      8: "wK",
+                    };
+                    const piece = previewPieces[idx];
+                    return (
+                      <div
+                        key={idx}
+                        className="relative flex items-center justify-center"
+                        style={{
+                          background: isDark
+                            ? currentBoardTheme.dark
+                            : currentBoardTheme.light,
+                        }}
+                      >
+                        {piece && (
+                          <img
+                            src={pieceSrc(selectedPieceSet, piece as "wK")}
+                            alt={piece}
+                            className="w-[18px] h-[18px]"
+                            style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom color pickers */}
+              {boardThemeChoice.type === "custom" && (
+                <div className="flex items-center gap-3 pt-1">
+                  <label className="flex items-center gap-2">
+                    <span className="text-xs text-text-muted">light</span>
+                    <div
+                      className="relative w-6 h-6 rounded border border-border overflow-hidden"
+                      style={{ background: boardThemeChoice.light }}
+                    >
+                      <input
+                        type="color"
+                        value={boardThemeChoice.light}
+                        onChange={(e) =>
+                          selectBoardTheme({
+                            type: "custom",
+                            dark: boardThemeChoice.dark,
+                            light: e.target.value,
+                          })
+                        }
+                        className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                      />
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <span className="text-xs text-text-muted">dark</span>
+                    <div
+                      className="relative w-6 h-6 rounded border border-border overflow-hidden"
+                      style={{ background: boardThemeChoice.dark }}
+                    >
+                      <input
+                        type="color"
+                        value={boardThemeChoice.dark}
+                        onChange={(e) =>
+                          selectBoardTheme({
+                            type: "custom",
+                            dark: e.target.value,
+                            light: boardThemeChoice.light,
+                          })
+                        }
+                        className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                      />
+                    </div>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-border" />
+
+            {/* Piece set */}
+            <div className="space-y-2">
+              <div className="text-xs text-text-secondary">pieces</div>
+              <div className="flex items-center gap-3">
+                {PIECE_SETS.map((set) => {
+                  const isActive = selectedPieceSet === set.key;
+                  return (
+                    <button
+                      key={set.key}
+                      onClick={() => selectPieceSet(set.key)}
+                      className="flex flex-col items-center gap-1.5 px-2 py-2 rounded-lg border transition-colors cursor-pointer"
+                      style={{
+                        borderColor: isActive
+                          ? currentAccent
+                          : "var(--color-border)",
+                        background: isActive
+                          ? `${currentAccent}15`
+                          : "transparent",
+                      }}
+                    >
+                      <img
+                        src={pieceSrc(set.key, "wN")}
+                        alt={set.name}
+                        className="w-9 h-9"
+                        style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" }}
+                      />
+                      <span
+                        className="text-xs font-medium"
+                        style={{
+                          color: isActive
+                            ? currentAccent
+                            : "var(--color-text-primary)",
+                        }}
+                      >
+                        {set.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

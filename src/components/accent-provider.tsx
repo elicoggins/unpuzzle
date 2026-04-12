@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  loadBoardThemeChoice,
+  resolveTheme,
+  BOARD_THEME_CHANGE_EVENT,
+  type BoardTheme,
+} from "@/lib/board-settings";
 
 const ACCENT_KEY = "accent-color";
 const FONT_KEY = "heading-font";
@@ -14,6 +20,14 @@ function applyAccent(accent: string, accentHover: string) {
 
 function applyFont(fontVar: string) {
   document.documentElement.style.setProperty("--font-heading", `var(${fontVar})`);
+}
+
+function applyBoardTheme(theme: BoardTheme) {
+  const s = document.documentElement.style;
+  s.setProperty("--color-board-dark", theme.dark);
+  s.setProperty("--color-board-light", theme.light);
+  s.setProperty("--color-board-notation-dark", theme.notationDark);
+  s.setProperty("--color-board-notation-light", theme.notationLight);
 }
 
 export function AccentProvider() {
@@ -44,6 +58,14 @@ export function AccentProvider() {
       // ignore
     }
 
+    // Board theme
+    try {
+      const choice = loadBoardThemeChoice();
+      applyBoardTheme(resolveTheme(choice));
+    } catch {
+      // ignore
+    }
+
     function handleAccentChange(e: Event) {
       const { accent, accentHover } = (e as CustomEvent).detail;
       applyAccent(accent, accentHover);
@@ -54,11 +76,17 @@ export function AccentProvider() {
       applyFont(fontVar);
     }
 
+    function handleBoardThemeChange(e: Event) {
+      applyBoardTheme((e as CustomEvent).detail as BoardTheme);
+    }
+
     window.addEventListener(ACCENT_CHANGE_EVENT, handleAccentChange);
     window.addEventListener(FONT_CHANGE_EVENT, handleFontChange);
+    window.addEventListener(BOARD_THEME_CHANGE_EVENT, handleBoardThemeChange);
     return () => {
       window.removeEventListener(ACCENT_CHANGE_EVENT, handleAccentChange);
       window.removeEventListener(FONT_CHANGE_EVENT, handleFontChange);
+      window.removeEventListener(BOARD_THEME_CHANGE_EVENT, handleBoardThemeChange);
     };
   }, []);
 
