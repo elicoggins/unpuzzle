@@ -321,7 +321,7 @@ export default function SettingsPage() {
           <div className="border border-border rounded-lg p-4 space-y-3 relative">
             {/* 4×4 mini preview — positioned in top-right over header/label whitespace */}
             <div
-              className="absolute top-3 right-4 inline-grid rounded overflow-hidden border border-border"
+              className="absolute top-3 right-4 z-10 inline-grid rounded overflow-hidden border border-border"
               style={{
                 gridTemplateColumns: "repeat(4, 24px)",
                 gridTemplateRows: "repeat(4, 24px)",
@@ -374,7 +374,13 @@ export default function SettingsPage() {
             {/* Board theme */}
             <div className="space-y-2">
               <div className="text-xs text-text-secondary">theme</div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div
+                className="flex items-center gap-2 overflow-x-auto max-w-[60%]"
+                style={{
+                  maskImage: "linear-gradient(to right, black 80%, transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(to right, black 80%, transparent 100%)",
+                }}
+              >
                   {BOARD_THEMES.map((theme, i) => {
                     const isActive =
                       boardThemeChoice.type === "preset" &&
@@ -521,7 +527,7 @@ export default function SettingsPage() {
             <div className="border-t border-border" />
 
             {/* Pieces + Texture side by side */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 overflow-x-auto">
               {/* Piece set */}
               <div className="space-y-1.5">
                 <div className="text-xs text-text-secondary">pieces</div>
