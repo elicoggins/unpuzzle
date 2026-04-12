@@ -22,7 +22,7 @@ import {
 const STORAGE_KEY = "accent-color";
 const FONT_KEY = "heading-font";
 export const DEPTH_KEY = "engine-depth";
-export const DEPTH_OPTIONS = [18, 20, 24] as const;
+export const DEPTH_OPTIONS = [15, 18, 20, 24] as const;
 export type EngineDepthOption = typeof DEPTH_OPTIONS[number];
 
 export function loadDepth(): EngineDepthOption {
@@ -688,8 +688,8 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-2">
               {DEPTH_OPTIONS.map((d) => {
                 const isActive = selectedDepth === d;
-                const label = d === 18 ? "Fast" : d === 20 ? "Balanced" : "Deep";
-                const desc = d === 18 ? "~3–5s per move" : d === 20 ? "~8–12s per move" : "~20–30s per move";
+                const label = d === 15 ? "Lite" : d === 18 ? "Fast" : d === 20 ? "Balanced" : "Deep";
+                const desc = d === 15 ? "~1–2s per move" : d === 18 ? "~3–5s per move" : d === 20 ? "~8–12s per move" : "~20–30s per move";
                 return (
                   <button
                     key={d}
