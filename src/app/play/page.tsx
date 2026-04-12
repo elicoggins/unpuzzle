@@ -416,6 +416,36 @@ export default function PlayPage() {
               onBestLineClick={board.onBestLineClick}
               onRefutationLineClick={board.onRefutationLineClick}
             />
+            {/* Mobile session stats — shown after scoring */}
+            <div className="border border-border rounded-lg px-4 py-3 flex items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-1">
+                <span className="text-text-muted">puzzles</span>
+                <span className="font-[family-name:var(--font-mono)] text-text-secondary">{sessionScores.length}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-text-muted">ACPL</span>
+                <span className="font-[family-name:var(--font-mono)] text-text-secondary">{sessionACPL ?? 0}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setStreakShowBest((s) => !s)}
+                  className="text-text-muted cursor-pointer hover:text-accent transition-colors"
+                >
+                  {streakShowBest ? "best" : "streak"}
+                </button>
+                <span
+                  className={`font-[family-name:var(--font-mono)] transition-colors ${
+                    !streakShowBest && streakMilestone !== null ? "text-accent" : "text-text-secondary"
+                  }`}
+                >
+                  {streakShowBest ? bestStreak : currentStreak}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-text-muted">avg</span>
+                <span className="font-[family-name:var(--font-mono)] text-text-secondary">{avgTimeFormatted ?? "0:00"}</span>
+              </div>
+            </div>
           </>
         )}
 
