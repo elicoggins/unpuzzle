@@ -90,9 +90,15 @@ export function ChessBoard({
           },
           darkSquareStyle: {
             backgroundColor: "var(--color-board-dark)",
+            backgroundImage: "var(--board-texture)",
+            backgroundSize: "128px 128px",
+            backgroundRepeat: "repeat",
           },
           lightSquareStyle: {
             backgroundColor: "var(--color-board-light)",
+            backgroundImage: "var(--board-texture)",
+            backgroundSize: "128px 128px",
+            backgroundRepeat: "repeat",
           },
           darkSquareNotationStyle: {
             color: "var(--color-board-notation-dark)",

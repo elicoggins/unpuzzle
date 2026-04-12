@@ -6,11 +6,15 @@ import { hexToHsl, hslToHex } from "@/lib/color-utils";
 import {
   BOARD_THEMES,
   PIECE_SETS,
+  SQUARE_TEXTURES,
   loadBoardThemeChoice,
   saveBoardTheme,
   resolveTheme,
   loadPieceSetKey,
   savePieceSet,
+  loadSquareTextureKey,
+  saveSquareTexture,
+  resolveTexture,
   pieceSrc,
   type BoardThemeChoice,
 } from "@/lib/board-settings";
@@ -102,6 +106,7 @@ export default function SettingsPage() {
     index: 0,
   });
   const [selectedPieceSet, setSelectedPieceSet] = useState(PIECE_SETS[0].key);
+  const [selectedTexture, setSelectedTexture] = useState(SQUARE_TEXTURES[0].key);
 
   useEffect(() => {
     // Accent color
@@ -115,6 +120,9 @@ export default function SettingsPage() {
 
     // Piece set
     setSelectedPieceSet(loadPieceSetKey());
+
+    // Square texture
+    setSelectedTexture(loadSquareTextureKey());
 
     // Heading font
     try {
@@ -169,8 +177,14 @@ export default function SettingsPage() {
     savePieceSet(key);
   }
 
+  function selectTexture(key: string) {
+    setSelectedTexture(key);
+    saveSquareTexture(key);
+  }
+
   const currentAccent = resolveAccent(choice).accent;
   const currentBoardTheme = resolveTheme(boardThemeChoice);
+  const currentTexture = resolveTexture(selectedTexture);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-start px-6 py-4">
@@ -303,84 +317,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Font */}
-          <div className="border border-border rounded-lg p-4 space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
-              font
-            </h2>
-            <div className="flex flex-col gap-2">
-              {FONT_OPTIONS.map((font) => {
-                const isActive = selectedFont === font.cssVar;
-                return (
-                  <button
-                    key={font.cssVar}
-                    onClick={() => selectFont(font.cssVar)}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors cursor-pointer text-left"
-                    style={{
-                      borderColor: isActive
-                        ? currentAccent
-                        : "var(--color-border)",
-                      background: isActive
-                        ? `${currentAccent}15`
-                        : "transparent",
-                    }}
-                  >
-                    <span
-                      className="text-sm font-medium"
-                      style={{
-                        fontFamily: `var(${font.cssVar})`,
-                        color: isActive
-                          ? currentAccent
-                          : "var(--color-text-primary)",
-                      }}
-                    >
-                      {font.name}
-                    </span>
-                    <span
-                      className="text-xs text-text-muted truncate"
-                      style={{
-                        fontFamily: `var(${font.cssVar})`,
-                        fontSize: font.cssVar === "--font-press-start" ? "0.5rem" : undefined,
-                      }}
-                    >
-                      the quick brown fox
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Engine Depth */}
-          <div className="border border-border rounded-lg p-4 space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
-              engine depth
-            </h2>
-            <div className="flex flex-col gap-2">
-              {DEPTH_OPTIONS.map((d) => {
-                const isActive = selectedDepth === d;
-                const label = d === 18 ? "Fast" : d === 20 ? "Balanced" : "Deep";
-                const desc = d === 18 ? "~3–5s per move" : d === 20 ? "~8–12s per move" : "~20–30s per move";
-                return (
-                  <button
-                    key={d}
-                    onClick={() => selectDepth(d)}
-                    className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors cursor-pointer text-left"
-                    style={{
-                      borderColor: isActive ? currentAccent : "var(--color-border)",
-                      background: isActive ? `${currentAccent}15` : "transparent",
-                    }}
-                  >
-                    <span className="text-sm font-medium" style={{ color: isActive ? currentAccent : "var(--color-text-primary)" }}>
-                      d{d} · {label}
-                    </span>
-                    <span className="text-xs text-text-muted">{desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Board */}
           <div className="border border-border rounded-lg p-4 space-y-3 relative">
             {/* 4×4 mini preview — positioned in top-right over header/label whitespace */}
@@ -411,9 +347,11 @@ export default function SettingsPage() {
                     key={idx}
                     className="relative flex items-center justify-center"
                     style={{
-                      background: isDark
+                      backgroundColor: isDark
                         ? currentBoardTheme.dark
                         : currentBoardTheme.light,
+                      backgroundImage: currentTexture.overlay,
+                      backgroundSize: "128px 128px",
                     }}
                   >
                     {piece && (
@@ -582,46 +520,187 @@ export default function SettingsPage() {
             {/* Divider */}
             <div className="border-t border-border" />
 
-            {/* Piece set */}
-            <div className="space-y-2">
-              <div className="text-xs text-text-secondary">pieces</div>
-              <div className="flex items-center gap-3">
-                {PIECE_SETS.map((set) => {
-                  const isActive = selectedPieceSet === set.key;
-                  return (
-                    <button
-                      key={set.key}
-                      onClick={() => selectPieceSet(set.key)}
-                      className="flex flex-col items-center gap-1.5 px-2 py-2 rounded-lg border transition-colors cursor-pointer"
-                      style={{
-                        borderColor: isActive
-                          ? currentAccent
-                          : "var(--color-border)",
-                        background: isActive
-                          ? `${currentAccent}15`
-                          : "transparent",
-                      }}
-                    >
-                      <img
-                        src={pieceSrc(set.key, "wN")}
-                        alt={set.name}
-                        className="w-9 h-9"
-                        style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" }}
-                      />
-                      <span
-                        className="text-xs font-medium"
+            {/* Pieces + Texture side by side */}
+            <div className="flex gap-4">
+              {/* Piece set */}
+              <div className="space-y-1.5">
+                <div className="text-xs text-text-secondary">pieces</div>
+                <div className="flex items-center gap-2.5">
+                  {PIECE_SETS.map((set) => {
+                    const isActive = selectedPieceSet === set.key;
+                    return (
+                      <button
+                        key={set.key}
+                        onClick={() => selectPieceSet(set.key)}
+                        className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg border transition-colors cursor-pointer"
                         style={{
-                          color: isActive
+                          borderColor: isActive
                             ? currentAccent
-                            : "var(--color-text-primary)",
+                            : "var(--color-border)",
+                          background: isActive
+                            ? `${currentAccent}15`
+                            : "transparent",
                         }}
                       >
-                        {set.name}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <img
+                          src={pieceSrc(set.key, "wN")}
+                          alt={set.name}
+                          className="w-8 h-8"
+                          style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" }}
+                        />
+                        <span
+                          className="text-[11px] font-medium leading-none"
+                          style={{
+                            color: isActive
+                              ? currentAccent
+                              : "var(--color-text-primary)",
+                          }}
+                        >
+                          {set.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Vertical divider */}
+              <div className="border-l border-border" />
+
+              {/* Square texture */}
+              <div className="space-y-1.5">
+                <div className="text-xs text-text-secondary">texture</div>
+                <div className="flex items-center gap-2.5">
+                  {SQUARE_TEXTURES.map((tex) => {
+                    const isActive = selectedTexture === tex.key;
+                    return (
+                      <button
+                        key={tex.key}
+                        onClick={() => selectTexture(tex.key)}
+                        className="flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg border transition-colors cursor-pointer"
+                        style={{
+                          borderColor: isActive
+                            ? currentAccent
+                            : "var(--color-border)",
+                          background: isActive
+                            ? `${currentAccent}15`
+                            : "transparent",
+                        }}
+                      >
+                        {/* 2×2 mini swatch showing texture on current board colors */}
+                        <div
+                          className="inline-grid rounded overflow-hidden"
+                          style={{
+                            gridTemplateColumns: "repeat(2, 16px)",
+                            gridTemplateRows: "repeat(2, 16px)",
+                          }}
+                        >
+                          {[false, true, true, false].map((isDark, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                backgroundColor: isDark
+                                  ? currentBoardTheme.dark
+                                  : currentBoardTheme.light,
+                                backgroundImage: tex.overlay,
+                                backgroundSize: "128px 128px",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className="text-[11px] font-medium leading-none"
+                          style={{
+                            color: isActive
+                              ? currentAccent
+                              : "var(--color-text-primary)",
+                          }}
+                        >
+                          {tex.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Font */}
+          <div className="border border-border rounded-lg p-4 space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+              font
+            </h2>
+            <div className="flex flex-col gap-2">
+              {FONT_OPTIONS.map((font) => {
+                const isActive = selectedFont === font.cssVar;
+                return (
+                  <button
+                    key={font.cssVar}
+                    onClick={() => selectFont(font.cssVar)}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors cursor-pointer text-left"
+                    style={{
+                      borderColor: isActive
+                        ? currentAccent
+                        : "var(--color-border)",
+                      background: isActive
+                        ? `${currentAccent}15`
+                        : "transparent",
+                    }}
+                  >
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        fontFamily: `var(${font.cssVar})`,
+                        color: isActive
+                          ? currentAccent
+                          : "var(--color-text-primary)",
+                      }}
+                    >
+                      {font.name}
+                    </span>
+                    <span
+                      className="text-xs text-text-muted truncate"
+                      style={{
+                        fontFamily: `var(${font.cssVar})`,
+                        fontSize: font.cssVar === "--font-press-start" ? "0.5rem" : undefined,
+                      }}
+                    >
+                      the quick brown fox
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Engine Depth */}
+          <div className="border border-border rounded-lg p-4 space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
+              engine depth
+            </h2>
+            <div className="flex flex-col gap-2">
+              {DEPTH_OPTIONS.map((d) => {
+                const isActive = selectedDepth === d;
+                const label = d === 18 ? "Fast" : d === 20 ? "Balanced" : "Deep";
+                const desc = d === 18 ? "~3–5s per move" : d === 20 ? "~8–12s per move" : "~20–30s per move";
+                return (
+                  <button
+                    key={d}
+                    onClick={() => selectDepth(d)}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg border transition-colors cursor-pointer text-left"
+                    style={{
+                      borderColor: isActive ? currentAccent : "var(--color-border)",
+                      background: isActive ? `${currentAccent}15` : "transparent",
+                    }}
+                  >
+                    <span className="text-sm font-medium" style={{ color: isActive ? currentAccent : "var(--color-text-primary)" }}>
+                      d{d} · {label}
+                    </span>
+                    <span className="text-xs text-text-muted">{desc}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

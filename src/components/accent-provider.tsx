@@ -5,7 +5,11 @@ import {
   loadBoardThemeChoice,
   resolveTheme,
   BOARD_THEME_CHANGE_EVENT,
+  loadSquareTextureKey,
+  resolveTexture,
+  SQUARE_TEXTURE_CHANGE_EVENT,
   type BoardTheme,
+  type SquareTexture,
 } from "@/lib/board-settings";
 
 const ACCENT_KEY = "accent-color";
@@ -28,6 +32,11 @@ function applyBoardTheme(theme: BoardTheme) {
   s.setProperty("--color-board-light", theme.light);
   s.setProperty("--color-board-notation-dark", theme.notationDark);
   s.setProperty("--color-board-notation-light", theme.notationLight);
+}
+
+function applySquareTexture(texture: SquareTexture) {
+  const s = document.documentElement.style;
+  s.setProperty("--board-texture", texture.overlay);
 }
 
 export function AccentProvider() {
@@ -66,6 +75,13 @@ export function AccentProvider() {
       // ignore
     }
 
+    // Square texture
+    try {
+      applySquareTexture(resolveTexture(loadSquareTextureKey()));
+    } catch {
+      // ignore
+    }
+
     function handleAccentChange(e: Event) {
       const { accent, accentHover } = (e as CustomEvent).detail;
       applyAccent(accent, accentHover);
@@ -80,13 +96,19 @@ export function AccentProvider() {
       applyBoardTheme((e as CustomEvent).detail as BoardTheme);
     }
 
+    function handleSquareTextureChange(e: Event) {
+      applySquareTexture((e as CustomEvent).detail as SquareTexture);
+    }
+
     window.addEventListener(ACCENT_CHANGE_EVENT, handleAccentChange);
     window.addEventListener(FONT_CHANGE_EVENT, handleFontChange);
     window.addEventListener(BOARD_THEME_CHANGE_EVENT, handleBoardThemeChange);
+    window.addEventListener(SQUARE_TEXTURE_CHANGE_EVENT, handleSquareTextureChange);
     return () => {
       window.removeEventListener(ACCENT_CHANGE_EVENT, handleAccentChange);
       window.removeEventListener(FONT_CHANGE_EVENT, handleFontChange);
       window.removeEventListener(BOARD_THEME_CHANGE_EVENT, handleBoardThemeChange);
+      window.removeEventListener(SQUARE_TEXTURE_CHANGE_EVENT, handleSquareTextureChange);
     };
   }, []);
 

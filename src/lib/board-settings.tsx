@@ -70,13 +70,48 @@ export type BoardThemeChoice =
   | { type: "preset"; index: number }
   | { type: "custom"; dark: string; light: string };
 
+// ── Asset base path ─────────────────────────────────────────────────
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+// ── Square textures ─────────────────────────────────────────────────
+
+export interface SquareTexture {
+  name: string;
+  key: string;
+  overlay: string;
+}
+
+const texturePath = (file: string) =>
+  `url('${basePath}/textures/${file}')`;
+
+export const SQUARE_TEXTURES: SquareTexture[] = [
+  {
+    name: "None",
+    key: "none",
+    overlay: "none",
+  },
+  {
+    name: "Grain",
+    key: "grain",
+    overlay: texturePath("grain.png"),
+  },
+  {
+    name: "Wood",
+    key: "wood",
+    overlay: texturePath("wood.png"),
+  },
+];
+
 // ── localStorage keys & events ──────────────────────────────────────
 
 const BOARD_THEME_KEY = "board-theme";
 const PIECE_SET_KEY = "piece-set";
+const SQUARE_TEXTURE_KEY = "square-texture";
 
 export const BOARD_THEME_CHANGE_EVENT = "board-theme-change";
 export const PIECE_SET_CHANGE_EVENT = "piece-set-change";
+export const SQUARE_TEXTURE_CHANGE_EVENT = "square-texture-change";
 
 // ── Board theme persistence ─────────────────────────────────────────
 
@@ -139,9 +174,29 @@ export function savePieceSet(key: string) {
   );
 }
 
-// ── Piece object builder ────────────────────────────────────────────
+// ── Square texture persistence ───────────────────────────────────────
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+export function loadSquareTextureKey(): string {
+  try {
+    const raw = localStorage.getItem(SQUARE_TEXTURE_KEY);
+    if (raw && SQUARE_TEXTURES.some((t) => t.key === raw)) return raw;
+  } catch {}
+  return SQUARE_TEXTURES[0].key;
+}
+
+export function resolveTexture(key: string): SquareTexture {
+  return SQUARE_TEXTURES.find((t) => t.key === key) ?? SQUARE_TEXTURES[0];
+}
+
+export function saveSquareTexture(key: string) {
+  localStorage.setItem(SQUARE_TEXTURE_KEY, key);
+  const texture = resolveTexture(key);
+  window.dispatchEvent(
+    new CustomEvent(SQUARE_TEXTURE_CHANGE_EVENT, { detail: texture })
+  );
+}
+
+// ── Piece object builder ────────────────────────────────────────────
 
 export function pieceSrc(setKey: string, piece: PieceKey): string {
   return `${basePath}/pieces/${setKey}/${piece}.svg`;
