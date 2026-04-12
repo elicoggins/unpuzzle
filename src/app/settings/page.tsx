@@ -33,7 +33,6 @@ export function loadDepth(): EngineDepthOption {
       if ((DEPTH_OPTIONS as readonly number[]).includes(n)) return n as EngineDepthOption;
     }
   } catch {}
-  if (typeof window !== "undefined" && window.innerWidth < 768) return 12;
   return 15;
 }
 
