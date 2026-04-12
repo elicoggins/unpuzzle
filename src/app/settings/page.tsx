@@ -382,16 +382,61 @@ export default function SettingsPage() {
           </div>
 
           {/* Board */}
-          <div className="border border-border rounded-lg p-4 space-y-3">
+          <div className="border border-border rounded-lg p-4 space-y-3 relative">
+            {/* 4×4 mini preview — positioned in top-right over header/label whitespace */}
+            <div
+              className="absolute top-3 right-4 inline-grid rounded overflow-hidden border border-border"
+              style={{
+                gridTemplateColumns: "repeat(4, 24px)",
+                gridTemplateRows: "repeat(4, 24px)",
+              }}
+            >
+              {Array.from({ length: 16 }).map((_, idx) => {
+                const row = Math.floor(idx / 4);
+                const col = idx % 4;
+                const isDark = (row + col) % 2 === 1;
+                const previewPieces: Record<number, string> = {
+                  1: "bQ",
+                  3: "bK",
+                  4: "bP",
+                  6: "bP",
+                  9: "wN",
+                  11: "wB",
+                  12: "wR",
+                  15: "wK",
+                };
+                const piece = previewPieces[idx];
+                return (
+                  <div
+                    key={idx}
+                    className="relative flex items-center justify-center"
+                    style={{
+                      background: isDark
+                        ? currentBoardTheme.dark
+                        : currentBoardTheme.light,
+                    }}
+                  >
+                    {piece && (
+                      <img
+                        src={pieceSrc(selectedPieceSet, piece as "wK")}
+                        alt={piece}
+                        className="w-4 h-4"
+                        style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">
               board
             </h2>
 
-            {/* Board theme + mini preview inline */}
+            {/* Board theme */}
             <div className="space-y-2">
               <div className="text-xs text-text-secondary">theme</div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                   {BOARD_THEMES.map((theme, i) => {
                     const isActive =
                       boardThemeChoice.type === "preset" &&
@@ -485,53 +530,6 @@ export default function SettingsPage() {
                       Custom
                     </span>
                   </button>
-                </div>
-
-                {/* 4×4 mini preview */}
-                <div
-                  className="inline-grid rounded overflow-hidden border border-border shrink-0 ml-auto"
-                  style={{
-                    gridTemplateColumns: "repeat(4, 16px)",
-                    gridTemplateRows: "repeat(4, 16px)",
-                  }}
-                >
-                  {Array.from({ length: 16 }).map((_, idx) => {
-                    const row = Math.floor(idx / 4);
-                    const col = idx % 4;
-                    const isDark = (row + col) % 2 === 1;
-                    const previewPieces: Record<number, string> = {
-                      1: "bQ",
-                      3: "bK",
-                      4: "bP",
-                      6: "bP",
-                      9: "wN",
-                      11: "wB",
-                      12: "wR",
-                      15: "wK",
-                    };
-                    const piece = previewPieces[idx];
-                    return (
-                      <div
-                        key={idx}
-                        className="relative flex items-center justify-center"
-                        style={{
-                          background: isDark
-                            ? currentBoardTheme.dark
-                            : currentBoardTheme.light,
-                        }}
-                      >
-                        {piece && (
-                          <img
-                            src={pieceSrc(selectedPieceSet, piece as "wK")}
-                            alt={piece}
-                            className="w-3.5 h-3.5"
-                            style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.3))" }}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
 
               {/* Custom color pickers */}
