@@ -502,7 +502,9 @@ export default function SettingsPage() {
 
               {/* Custom color pickers */}
               {boardThemeChoice.type === "custom" && (
-                <div className="flex items-center gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <div className="text-xs text-text-secondary">custom</div>
+                  <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2">
                     <span className="text-xs text-text-muted">light</span>
                     <div
@@ -543,6 +545,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </label>
+                  </div>
                 </div>
               )}
             </div>
