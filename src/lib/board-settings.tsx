@@ -23,10 +23,10 @@ export const BOARD_THEMES: BoardTheme[] = [
   },
   {
     name: "Forest",
-    dark: "#2a3a2a",
-    light: "#4a5a48",
-    notationDark: "#6a7a68",
-    notationLight: "#3a4a38",
+    dark: "#4a7a4a",
+    light: "#8ab88a",
+    notationDark: "#a0d0a0",
+    notationLight: "#3a6a3a",
   },
   {
     name: "Ocean",
