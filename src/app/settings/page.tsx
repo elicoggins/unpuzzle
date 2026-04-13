@@ -701,7 +701,7 @@ export default function SettingsPage() {
                     }}
                   >
                     <span className="text-sm font-medium" style={{ color: isActive ? currentAccent : "var(--color-text-primary)" }}>
-                      d{d} · {label}
+                      {d} · {label}
                     </span>
                     <span className="text-xs text-text-muted">{desc}</span>
                   </button>
