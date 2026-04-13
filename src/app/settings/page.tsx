@@ -104,6 +104,7 @@ export default function SettingsPage() {
   const [boardThemeChoice, setBoardThemeChoice] = useState<BoardThemeChoice>({
     type: "preset",
     index: 0,
+    gamma: 0,
   });
   const [selectedPieceSet, setSelectedPieceSet] = useState(PIECE_SETS[0].key);
   const [selectedTexture, setSelectedTexture] = useState(SQUARE_TEXTURES[0].key);
@@ -385,11 +386,13 @@ export default function SettingsPage() {
                     const isActive =
                       boardThemeChoice.type === "preset" &&
                       boardThemeChoice.index === i;
+                    const gamma = boardThemeChoice.type === "preset" ? (boardThemeChoice.gamma ?? 0) : 0;
+                    const preview = resolveTheme({ type: "preset", index: i, gamma });
                     return (
                       <button
                         key={theme.name}
                         onClick={() =>
-                          selectBoardTheme({ type: "preset", index: i })
+                          selectBoardTheme({ type: "preset", index: i, gamma })
                         }
                         className="flex flex-col items-center gap-1 cursor-pointer group"
                         title={theme.name}
@@ -407,11 +410,11 @@ export default function SettingsPage() {
                         >
                           <span
                             className="w-5 h-5"
-                            style={{ background: theme.light }}
+                            style={{ background: preview.light }}
                           />
                           <span
                             className="w-5 h-5"
-                            style={{ background: theme.dark }}
+                            style={{ background: preview.dark }}
                           />
                         </div>
                         <span
@@ -475,6 +478,27 @@ export default function SettingsPage() {
                     </span>
                   </button>
               </div>
+
+              {/* Gamma slider — preset themes only */}
+              {boardThemeChoice.type === "preset" && (
+                <div className="space-y-1.5">
+                  <div className="text-xs text-text-secondary">gamma</div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={boardThemeChoice.gamma ?? 0}
+                    onChange={(e) => {
+                      const gamma = parseInt(e.target.value, 10);
+                      selectBoardTheme({ type: "preset", index: boardThemeChoice.index, gamma });
+                    }}
+                    className="gamma-slider w-[60%] h-1.5 rounded-full appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, ${currentAccent} ${boardThemeChoice.gamma ?? 0}%, var(--color-bg-tertiary) ${boardThemeChoice.gamma ?? 0}%)`,
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Custom color pickers */}
               {boardThemeChoice.type === "custom" && (

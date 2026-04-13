@@ -23,17 +23,17 @@ export const BOARD_THEMES: BoardTheme[] = [
   },
   {
     name: "Forest",
-    dark: "#4a7a4a",
-    light: "#8ab88a",
-    notationDark: "#a0d0a0",
-    notationLight: "#3a6a3a",
+    dark: "#2a3a2a",
+    light: "#4a5a48",
+    notationDark: "#6a7a68",
+    notationLight: "#3a4a38",
   },
   {
     name: "Ocean",
-    dark: "#3f6280",
-    light: "#7c9fb0",
-    notationDark: "#94b8c8",
-    notationLight: "#4e728f",
+    dark: "#2b4764",
+    light: "#5a7a8a",
+    notationDark: "#7a9aaa",
+    notationLight: "#3a5a6a",
   },
   {
     name: "Walnut",
@@ -67,7 +67,7 @@ export type PieceKey = (typeof PIECE_KEYS)[number];
 // ── Theme choice types ──────────────────────────────────────────────
 
 export type BoardThemeChoice =
-  | { type: "preset"; index: number }
+  | { type: "preset"; index: number; gamma: number }
   | { type: "custom"; dark: string; light: string };
 
 // ── Asset base path ─────────────────────────────────────────────────
@@ -115,9 +115,43 @@ export const SQUARE_TEXTURE_CHANGE_EVENT = "square-texture-change";
 
 // ── Board theme persistence ─────────────────────────────────────────
 
+/**
+ * Apply gamma to a square color based on its role.
+ * - Light squares lerp toward near-white (high lightness, low saturation)
+ * - Dark squares lerp toward a mid-bright, saturated theme color
+ * This preserves contrast and color identity across the full range.
+ */
+function applyGamma(hex: string, gamma: number, role: "dark" | "light"): string {
+  const [h, s, l] = hexToHsl(hex);
+  const t = gamma / 100;
+
+  if (role === "light") {
+    // Push toward near-white with a faint hue tint
+    const targetL = 0.91;
+    const targetS = s * 0.3; // fade saturation to 30% of base
+    return hslToHex(h, s + (targetS - s) * t, l + (targetL - l) * t);
+  } else {
+    // Push toward a visible, saturated version of the theme color
+    const targetL = 0.45;
+    const targetS = Math.min(s * 1.5, 0.50); // boost saturation, cap at 0.50
+    return hslToHex(h, s + (targetS - s) * t, l + (targetL - l) * t);
+  }
+}
+
 export function resolveTheme(choice: BoardThemeChoice): BoardTheme {
   if (choice.type === "preset") {
-    return BOARD_THEMES[choice.index] ?? BOARD_THEMES[0];
+    const base = BOARD_THEMES[choice.index] ?? BOARD_THEMES[0];
+    const gamma = choice.gamma ?? 0;
+    if (gamma === 0) return base;
+    const dark = applyGamma(base.dark, gamma, "dark");
+    const light = applyGamma(base.light, gamma, "light");
+    return {
+      name: base.name,
+      dark,
+      light,
+      notationDark: deriveNotation(dark, true),
+      notationLight: deriveNotation(light, false),
+    };
   }
   return {
     name: "Custom",
@@ -143,7 +177,7 @@ export function loadBoardThemeChoice(): BoardThemeChoice {
       if (parsed.choice) return parsed.choice as BoardThemeChoice;
     }
   } catch {}
-  return { type: "preset", index: 0 };
+  return { type: "preset", index: 0, gamma: 0 };
 }
 
 export function saveBoardTheme(choice: BoardThemeChoice) {
