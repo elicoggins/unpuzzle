@@ -61,7 +61,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className="min-h-full flex flex-col bg-bg-primary text-text-primary font-[family-name:var(--font-heading)]">
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-bg-primary text-text-primary font-[family-name:var(--font-heading)]">
         <AccentProvider />
         <Nav />
         <main className="flex-1 flex flex-col">{children}</main>

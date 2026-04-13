@@ -15,7 +15,7 @@ export interface BoardTheme {
 
 export const BOARD_THEMES: BoardTheme[] = [
   {
-    name: "Default",
+    name: "Slate",
     dark: "#2e2e2e",
     light: "#424242",
     notationDark: "#666666",
@@ -30,10 +30,10 @@ export const BOARD_THEMES: BoardTheme[] = [
   },
   {
     name: "Ocean",
-    dark: "#2b4764",
-    light: "#5a7a8a",
-    notationDark: "#7a9aaa",
-    notationLight: "#3a5a6a",
+    dark: "#3f6280",
+    light: "#7c9fb0",
+    notationDark: "#94b8c8",
+    notationLight: "#4e728f",
   },
   {
     name: "Walnut",
