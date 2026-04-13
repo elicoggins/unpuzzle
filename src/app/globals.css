@@ -21,6 +21,10 @@
   --color-eval-black: #333333;
   --color-eval-white: #e8e8e8;
 
+  --board-highlight-soft: 30%;
+  --board-highlight-mid: 40%;
+  --board-highlight-strong: 50%;
+
   --color-score-perfect: #39ff14;
   --color-score-good: #39ff14;
   --color-score-inaccuracy: #ffff00;

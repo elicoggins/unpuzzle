@@ -169,6 +169,29 @@ function deriveNotation(hex: string, lighten: boolean): string {
   return hslToHex(h, s, Math.max(0, Math.min(1, l + shift)));
 }
 
+/**
+ * Compute highlight opacity percentages for square styles based on board brightness.
+ * As the board gets lighter, highlights need higher opacity to stay visible.
+ * Returns CSS percentage strings (e.g. "40%") for use in color-mix().
+ */
+export function boardHighlightPcts(theme: BoardTheme): {
+  soft: string;
+  mid: string;
+  strong: string;
+} {
+  const [, , darkL] = hexToHsl(theme.dark);
+  const [, , lightL] = hexToHsl(theme.light);
+  const avg = (darkL + lightL) / 2;
+  // avg lightness of ~0.20 (dark board) → ~0.65 (light board)
+  // boost opacity by up to 30pp as board brightens
+  const boost = Math.round(Math.max(0, Math.min(1, avg / 0.65)) * 30);
+  return {
+    soft: `${30 + boost}%`,
+    mid: `${40 + boost}%`,
+    strong: `${50 + boost}%`,
+  };
+}
+
 export function loadBoardThemeChoice(): BoardThemeChoice {
   try {
     const raw = localStorage.getItem(BOARD_THEME_KEY);

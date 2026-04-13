@@ -369,18 +369,18 @@ export function useBoardInteraction(
       styles[sq] = hasPiece
         ? {
             borderRadius: "50%",
-            boxShadow: "inset 0 0 0 4px color-mix(in srgb, var(--color-accent) 50%, transparent)",
+            boxShadow: "inset 0 0 0 4px color-mix(in srgb, var(--color-accent) var(--board-highlight-strong, 50%), transparent)",
             cursor: "pointer",
           }
         : {
-            background: "radial-gradient(circle, color-mix(in srgb, var(--color-accent) 40%, transparent) 25%, transparent 25%)",
+            background: "radial-gradient(circle, color-mix(in srgb, var(--color-accent) var(--board-highlight-mid, 40%), transparent) 25%, transparent 25%)",
             borderRadius: "50%",
             cursor: "pointer",
           };
     }
     if (selectedSquare) {
       styles[selectedSquare] = {
-        backgroundColor: "color-mix(in srgb, var(--color-accent) 30%, transparent)",
+        backgroundColor: "color-mix(in srgb, var(--color-accent) var(--board-highlight-soft, 30%), transparent)",
       };
     }
     if (gameState === "scored" && feedback && lastPlayedUci && lastPlayedUci.length >= 4) {

@@ -8,6 +8,7 @@ import {
   loadSquareTextureKey,
   resolveTexture,
   SQUARE_TEXTURE_CHANGE_EVENT,
+  boardHighlightPcts,
   type BoardTheme,
   type SquareTexture,
 } from "@/lib/board-settings";
@@ -32,6 +33,10 @@ function applyBoardTheme(theme: BoardTheme) {
   s.setProperty("--color-board-light", theme.light);
   s.setProperty("--color-board-notation-dark", theme.notationDark);
   s.setProperty("--color-board-notation-light", theme.notationLight);
+  const pcts = boardHighlightPcts(theme);
+  s.setProperty("--board-highlight-soft", pcts.soft);
+  s.setProperty("--board-highlight-mid", pcts.mid);
+  s.setProperty("--board-highlight-strong", pcts.strong);
 }
 
 function applySquareTexture(texture: SquareTexture) {
