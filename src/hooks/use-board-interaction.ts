@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Chess, type Square } from "chess.js";
 import { getScoreArrowColor } from "@/lib/scoring";
 import { walkUciPath } from "@/lib/chess-utils";
@@ -9,6 +9,13 @@ import type { Position, EvalFeedback } from "@/lib/types";
 import type { EngineLine } from "@/lib/chess-engine";
 import type { PieceDropHandlerArgs, PieceHandlerArgs, Arrow, SquareHandlerArgs } from "react-chessboard";
 import type { GameState } from "@/lib/game-state";
+import {
+  BOARD_THEME_CHANGE_EVENT,
+  loadBoardThemeChoice,
+  resolveTheme,
+  boardHighlightBoost,
+  type BoardTheme,
+} from "@/lib/board-settings";
 
 export interface UseBoardInteractionReturn {
   fen: string;
@@ -69,6 +76,19 @@ export function useBoardInteraction(
   const [legalMoveSquares, setLegalMoveSquares] = useState<string[]>([]);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [highlightedSquares, setHighlightedSquares] = useState<Set<string>>(new Set());
+  const [arrowBoost, setArrowBoost] = useState<number>(0);
+
+  useEffect(() => {
+    try {
+      const choice = loadBoardThemeChoice();
+      setArrowBoost(boardHighlightBoost(resolveTheme(choice)));
+    } catch {}
+    function handleThemeChange(e: Event) {
+      setArrowBoost(boardHighlightBoost((e as CustomEvent).detail as BoardTheme));
+    }
+    window.addEventListener(BOARD_THEME_CHANGE_EVENT, handleThemeChange);
+    return () => window.removeEventListener(BOARD_THEME_CHANGE_EVENT, handleThemeChange);
+  }, []);
 
   const selectedSquareRef = useRef<string | null>(null);
   const wasAlreadySelectedRef = useRef(false);
@@ -341,6 +361,14 @@ export function useBoardInteraction(
 
   // ── Derived display values ───────────────────────────────────────────
 
+  /** Scale an rgba() alpha value by adding the board brightness boost. */
+  function boostedRgba(rgba: string, boost: number): string {
+    return rgba.replace(
+      /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/,
+      (_, r, g, b, a) => `rgba(${r}, ${g}, ${b}, ${Math.min(1, parseFloat(a) + boost)})`
+    );
+  }
+
   const boardArrows = useMemo<Arrow[]>(() => {
     if (gameState !== "scored" || !feedback || !lastPlayedUci) return [];
     const arrows: Arrow[] = [];
@@ -348,18 +376,18 @@ export function useBoardInteraction(
       arrows.push({
         startSquare: feedback.bestMoveUci.slice(0, 2),
         endSquare: feedback.bestMoveUci.slice(2, 4),
-        color: "rgba(57, 255, 20, 0.75)",
+        color: boostedRgba("rgba(57, 255, 20, 0.75)", arrowBoost),
       });
     }
     if (lastPlayedUci.length >= 4) {
       arrows.push({
         startSquare: lastPlayedUci.slice(0, 2),
         endSquare: lastPlayedUci.slice(2, 4),
-        color: getScoreArrowColor(feedback.centipawnLoss),
+        color: boostedRgba(getScoreArrowColor(feedback.centipawnLoss), arrowBoost),
       });
     }
     return arrows;
-  }, [gameState, feedback, lastPlayedUci]);
+  }, [gameState, feedback, lastPlayedUci, arrowBoost]);
 
   const squareStyles = useMemo<Record<string, React.CSSProperties>>(() => {
     const styles: Record<string, React.CSSProperties> = {};

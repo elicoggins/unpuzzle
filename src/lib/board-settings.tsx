@@ -174,6 +174,17 @@ function deriveNotation(hex: string, lighten: boolean): string {
  * As the board gets lighter, highlights need higher opacity to stay visible.
  * Returns CSS percentage strings (e.g. "40%") for use in color-mix().
  */
+/**
+ * Returns a 0–0.30 boost factor based on board brightness.
+ * Used to scale arrow opacities so they stay visible on light boards.
+ */
+export function boardHighlightBoost(theme: BoardTheme): number {
+  const [, , darkL] = hexToHsl(theme.dark);
+  const [, , lightL] = hexToHsl(theme.light);
+  const avg = (darkL + lightL) / 2;
+  return Math.max(0, Math.min(1, avg / 0.65)) * 0.30;
+}
+
 export function boardHighlightPcts(theme: BoardTheme): {
   soft: string;
   mid: string;
